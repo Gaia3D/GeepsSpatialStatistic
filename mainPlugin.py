@@ -20,9 +20,8 @@
  *                                                                         *
  ***************************************************************************/
 """
-from PyQt4.QtCore import QSettings, QTranslator, qVersion, QCoreApplication
 from PyQt4.QtGui import *
-from qgis.core import QgsMessageLog
+from PyQt4.QtCore import *
 
 # Initialize Qt resources from file resources.py
 #import resources_rc
@@ -31,11 +30,47 @@ from GeepsSpStats.gui import dlgGlobalMoransI
 from plugin_dialog import GeepsSpStatsDialog
 from GeepsSpStats.gui.dlgGlobalMoransI import Dlg_GlobalMoransI
 import os.path
+from openlayers_ovwidget import OpenLayersOverviewWidget
+
+class OLOverview(object):
+
+    def __init__(self, iface):
+        self.__iface = iface
+        self.__dockwidget = None
+        self.__oloWidget = None
+
+    # Private
+    def __setDocWidget(self):
+        self.__dockwidget = QDockWidget(QApplication.translate("OpenLayersOverviewWidget", "Overview"), self.__iface.mainWindow() )
+        self.__dockwidget.setObjectName("dwOpenlayersOverview")
+        self.__oloWidget = OpenLayersOverviewWidget(self.__iface, self.__dockwidget)
+        self.__dockwidget.setWidget(self.__oloWidget)
+
+    def __initGui(self):
+        self.__setDocWidget()
+        self.__iface.addDockWidget( Qt.LeftDockWidgetArea, self.__dockwidget)
+
+    def __unload(self):
+        self.__dockwidget.close()
+        self.__iface.removeDockWidget( self.__dockwidget )
+        del self.__oloWidget
+        self.__dockwidget = None
+
+    # Public
+    def setVisible(self, visible):
+        if visible:
+            if self.__dockwidget is None:
+                self.__initGui()
+        else:
+            if not self.__dockwidget is None:
+                self.__unload()
 
 
 class GeepsSpStats:
     """QGIS Plugin Implementation."""
     dlgGlobalMoransI = None
+    name = "Geeps Spatial Statistic"
+
 
     def __init__(self, iface):
         """Constructor.
@@ -66,9 +101,8 @@ class GeepsSpStats:
             if qVersion() > '4.3.3':
                 QCoreApplication.installTranslator(self.translator)
 
-        # Create the dialog (after translation) and keep reference
-        self.dlg = GeepsSpStatsDialog()
-
+        # Overview
+        self.olOverview = OLOverview(iface)
 
 
     # noinspection PyMethodMayBeStatic
@@ -176,6 +210,7 @@ class GeepsSpStats:
                 self.mainMenu = action.menu()
                 break
 
+        """
         ### MENU1 : spatial autocorrelation
         self.menu1 = self.mainMenu.addMenu(self.tr(u'Spatial Autocorrelation'))
         self.mainMenu.addMenu(self.menu1)
@@ -241,7 +276,16 @@ class GeepsSpStats:
         self.help_Action  = QAction(icon, self.tr(u"About GEEPS Spatial Stats"), self.menu1)
         self.mainMenu.addAction(self.help_Action)
         self.help_Action.triggered.connect(self.showDlgGlobalMoransI)
+        """
 
+        # Overview
+        self.overviewAddAction = QAction(self.tr("Moran's I Statistic"), self.iface.mainWindow())
+        self.overviewAddAction.setCheckable(True)
+        self.overviewAddAction.setChecked(False)
+        self.mainMenu.addAction(self.overviewAddAction)
+
+        QObject.connect(self.overviewAddAction, SIGNAL("toggled(bool)"), self.olOverview.setVisible )
+        self.iface.addPluginToMenu(self.name, self.overviewAddAction)
 
         ### Main Menu 등록
         menuBar = self.iface.mainWindow().menuBar()
