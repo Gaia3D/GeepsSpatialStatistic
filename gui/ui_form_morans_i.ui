@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>400</width>
-    <height>540</height>
+    <width>368</width>
+    <height>524</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -16,8 +16,8 @@
   <widget class="QLabel" name="label">
    <property name="geometry">
     <rect>
-     <x>10</x>
-     <y>13</y>
+     <x>4</x>
+     <y>5</y>
      <width>81</width>
      <height>16</height>
     </rect>
@@ -29,9 +29,9 @@
   <widget class="QComboBox" name="cmbLayer">
    <property name="geometry">
     <rect>
-     <x>100</x>
-     <y>10</y>
-     <width>291</width>
+     <x>84</x>
+     <y>2</y>
+     <width>281</width>
      <height>22</height>
     </rect>
    </property>
@@ -39,8 +39,8 @@
   <widget class="QLabel" name="label_3">
    <property name="geometry">
     <rect>
-     <x>10</x>
-     <y>43</y>
+     <x>187</x>
+     <y>30</y>
      <width>81</width>
      <height>16</height>
     </rect>
@@ -52,9 +52,9 @@
   <widget class="QComboBox" name="cmbTgtColumn">
    <property name="geometry">
     <rect>
-     <x>100</x>
-     <y>40</y>
-     <width>291</width>
+     <x>274</x>
+     <y>27</y>
+     <width>91</width>
      <height>22</height>
     </rect>
    </property>
@@ -62,8 +62,8 @@
   <widget class="QRadioButton" name="rdoSingle">
    <property name="geometry">
     <rect>
-     <x>10</x>
-     <y>70</y>
+     <x>4</x>
+     <y>64</y>
      <width>141</width>
      <height>16</height>
     </rect>
@@ -75,8 +75,8 @@
   <widget class="QRadioButton" name="rdoMultiple">
    <property name="geometry">
     <rect>
-     <x>10</x>
-     <y>100</y>
+     <x>4</x>
+     <y>90</y>
      <width>151</width>
      <height>16</height>
     </rect>
@@ -85,11 +85,11 @@
     <string>Moran's I : Multiple</string>
    </property>
   </widget>
-  <widget class="QLabel" name="label_4">
+  <widget class="QLabel" name="lbl_s_1">
    <property name="geometry">
     <rect>
-     <x>170</x>
-     <y>70</y>
+     <x>164</x>
+     <y>64</y>
      <width>101</width>
      <height>16</height>
     </rect>
@@ -101,18 +101,21 @@
   <widget class="QLineEdit" name="edtSearchDistance">
    <property name="geometry">
     <rect>
-     <x>280</x>
-     <y>67</y>
-     <width>113</width>
+     <x>274</x>
+     <y>61</y>
+     <width>91</width>
      <height>20</height>
     </rect>
    </property>
   </widget>
-  <widget class="QLabel" name="label_5">
+  <widget class="QLabel" name="lbl_m_1">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
    <property name="geometry">
     <rect>
-     <x>170</x>
-     <y>100</y>
+     <x>164</x>
+     <y>90</y>
      <width>101</width>
      <height>16</height>
     </rect>
@@ -124,19 +127,22 @@
   <widget class="QLineEdit" name="edtCritcalZValue">
    <property name="geometry">
     <rect>
-     <x>280</x>
-     <y>97</y>
-     <width>113</width>
+     <x>274</x>
+     <y>87</y>
+     <width>91</width>
      <height>20</height>
     </rect>
    </property>
   </widget>
-  <widget class="QGroupBox" name="groupBox">
+  <widget class="QGroupBox" name="gb_multiple">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
    <property name="geometry">
     <rect>
-     <x>10</x>
-     <y>120</y>
-     <width>381</width>
+     <x>4</x>
+     <y>110</y>
+     <width>361</width>
      <height>41</height>
     </rect>
    </property>
@@ -147,7 +153,7 @@
     <property name="geometry">
      <rect>
       <x>10</x>
-      <y>16</y>
+      <y>17</y>
       <width>41</width>
       <height>16</height>
      </rect>
@@ -172,7 +178,7 @@
    <widget class="QLineEdit" name="edtTo">
     <property name="geometry">
      <rect>
-      <x>170</x>
+      <x>167</x>
       <y>15</y>
       <width>71</width>
       <height>20</height>
@@ -185,8 +191,8 @@
    <widget class="QLabel" name="label_7">
     <property name="geometry">
      <rect>
-      <x>130</x>
-      <y>16</y>
+      <x>127</x>
+      <y>17</y>
       <width>31</width>
       <height>16</height>
      </rect>
@@ -201,8 +207,8 @@
    <widget class="QLabel" name="label_8">
     <property name="geometry">
      <rect>
-      <x>260</x>
-      <y>16</y>
+      <x>241</x>
+      <y>17</y>
       <width>31</width>
       <height>16</height>
      </rect>
@@ -217,7 +223,7 @@
    <widget class="QLineEdit" name="edtBy">
     <property name="geometry">
      <rect>
-      <x>300</x>
+      <x>281</x>
       <y>15</y>
       <width>71</width>
       <height>20</height>
@@ -231,9 +237,9 @@
   <widget class="QPushButton" name="btnRun">
    <property name="geometry">
     <rect>
-     <x>10</x>
-     <y>170</y>
-     <width>121</width>
+     <x>4</x>
+     <y>160</y>
+     <width>111</width>
      <height>23</height>
     </rect>
    </property>
@@ -244,8 +250,8 @@
   <widget class="QPushButton" name="btnSaveChart">
    <property name="geometry">
     <rect>
-     <x>230</x>
-     <y>170</y>
+     <x>204</x>
+     <y>160</y>
      <width>81</width>
      <height>23</height>
     </rect>
@@ -257,8 +263,8 @@
   <widget class="QPushButton" name="btnSaveResult">
    <property name="geometry">
     <rect>
-     <x>310</x>
-     <y>170</y>
+     <x>284</x>
+     <y>160</y>
      <width>81</width>
      <height>23</height>
     </rect>
@@ -270,8 +276,8 @@
   <widget class="QPushButton" name="btnSaveMap">
    <property name="geometry">
     <rect>
-     <x>150</x>
-     <y>170</y>
+     <x>124</x>
+     <y>160</y>
      <width>81</width>
      <height>23</height>
     </rect>
@@ -286,8 +292,8 @@
   <widget class="QLabel" name="label_9">
    <property name="geometry">
     <rect>
-     <x>10</x>
-     <y>200</y>
+     <x>4</x>
+     <y>190</y>
      <width>131</width>
      <height>16</height>
     </rect>
@@ -296,21 +302,11 @@
     <string>Global Summary:</string>
    </property>
   </widget>
-  <widget class="QPlainTextEdit" name="txtGlobalSummary">
-   <property name="geometry">
-    <rect>
-     <x>10</x>
-     <y>216</y>
-     <width>381</width>
-     <height>111</height>
-    </rect>
-   </property>
-  </widget>
   <widget class="QLabel" name="label_10">
    <property name="geometry">
     <rect>
-     <x>10</x>
-     <y>334</y>
+     <x>4</x>
+     <y>324</y>
      <width>131</width>
      <height>16</height>
     </rect>
@@ -319,14 +315,162 @@
     <string>Local Summary:</string>
    </property>
   </widget>
-  <widget class="QPlainTextEdit" name="txtLocalSummary">
+  <widget class="QTableWidget" name="tblGlobalSummary">
    <property name="geometry">
     <rect>
-     <x>10</x>
-     <y>350</y>
-     <width>381</width>
+     <x>4</x>
+     <y>206</y>
+     <width>361</width>
+     <height>111</height>
+    </rect>
+   </property>
+   <property name="editTriggers">
+    <set>QAbstractItemView::NoEditTriggers</set>
+   </property>
+   <property name="cornerButtonEnabled">
+    <bool>false</bool>
+   </property>
+   <property name="rowCount">
+    <number>1</number>
+   </property>
+   <property name="columnCount">
+    <number>6</number>
+   </property>
+   <attribute name="horizontalHeaderVisible">
+    <bool>true</bool>
+   </attribute>
+   <attribute name="horizontalHeaderDefaultSectionSize">
+    <number>57</number>
+   </attribute>
+   <attribute name="verticalHeaderVisible">
+    <bool>false</bool>
+   </attribute>
+   <attribute name="verticalHeaderDefaultSectionSize">
+    <number>20</number>
+   </attribute>
+   <row/>
+   <column>
+    <property name="text">
+     <string>Dist(d)</string>
+    </property>
+   </column>
+   <column>
+    <property name="text">
+     <string>I(d)</string>
+    </property>
+   </column>
+   <column>
+    <property name="text">
+     <string>E[]</string>
+    </property>
+   </column>
+   <column>
+    <property name="text">
+     <string>V[]</string>
+    </property>
+   </column>
+   <column>
+    <property name="text">
+     <string>Z[]</string>
+    </property>
+   </column>
+   <column>
+    <property name="text">
+     <string>P[]</string>
+    </property>
+   </column>
+  </widget>
+  <widget class="QTableWidget" name="tblLocalSummary">
+   <property name="enabled">
+    <bool>true</bool>
+   </property>
+   <property name="geometry">
+    <rect>
+     <x>4</x>
+     <y>340</y>
+     <width>361</width>
      <height>181</height>
     </rect>
+   </property>
+   <property name="editTriggers">
+    <set>QAbstractItemView::NoEditTriggers</set>
+   </property>
+   <property name="rowCount">
+    <number>6</number>
+   </property>
+   <property name="columnCount">
+    <number>6</number>
+   </property>
+   <attribute name="horizontalHeaderVisible">
+    <bool>true</bool>
+   </attribute>
+   <attribute name="horizontalHeaderDefaultSectionSize">
+    <number>57</number>
+   </attribute>
+   <attribute name="verticalHeaderVisible">
+    <bool>false</bool>
+   </attribute>
+   <attribute name="verticalHeaderDefaultSectionSize">
+    <number>20</number>
+   </attribute>
+   <row/>
+   <row/>
+   <row/>
+   <row/>
+   <row/>
+   <row/>
+   <column>
+    <property name="text">
+     <string>ID</string>
+    </property>
+   </column>
+   <column>
+    <property name="text">
+     <string>Local I(d)</string>
+    </property>
+   </column>
+   <column>
+    <property name="text">
+     <string>E[]</string>
+    </property>
+   </column>
+   <column>
+    <property name="text">
+     <string>V[]</string>
+    </property>
+   </column>
+   <column>
+    <property name="text">
+     <string>Z[]</string>
+    </property>
+   </column>
+   <column>
+    <property name="text">
+     <string>P[]</string>
+    </property>
+   </column>
+  </widget>
+  <widget class="QComboBox" name="cmbIdColumn">
+   <property name="geometry">
+    <rect>
+     <x>84</x>
+     <y>27</y>
+     <width>91</width>
+     <height>22</height>
+    </rect>
+   </property>
+  </widget>
+  <widget class="QLabel" name="label_4">
+   <property name="geometry">
+    <rect>
+     <x>4</x>
+     <y>30</y>
+     <width>81</width>
+     <height>16</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>ID Column:</string>
    </property>
   </widget>
  </widget>
