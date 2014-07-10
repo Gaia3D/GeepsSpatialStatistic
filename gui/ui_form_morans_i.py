@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'ui_form_morans_i.ui'
 #
-# Created: Wed Jul 09 21:29:35 2014
+# Created: Thu Jul 10 19:23:48 2014
 #      by: PyQt4 UI code generator 4.10.2
 #
 # WARNING! All changes made in this file will be lost!
@@ -132,7 +132,7 @@ class Ui_Form_Parameter(object):
         self.tblLocalSummary.setGeometry(QtCore.QRect(4, 340, 361, 181))
         self.tblLocalSummary.setEditTriggers(QtGui.QAbstractItemView.NoEditTriggers)
         self.tblLocalSummary.setRowCount(6)
-        self.tblLocalSummary.setColumnCount(6)
+        self.tblLocalSummary.setColumnCount(4)
         self.tblLocalSummary.setObjectName(_fromUtf8("tblLocalSummary"))
         item = QtGui.QTableWidgetItem()
         self.tblLocalSummary.setHorizontalHeaderItem(0, item)
@@ -142,12 +142,9 @@ class Ui_Form_Parameter(object):
         self.tblLocalSummary.setHorizontalHeaderItem(2, item)
         item = QtGui.QTableWidgetItem()
         self.tblLocalSummary.setHorizontalHeaderItem(3, item)
-        item = QtGui.QTableWidgetItem()
-        self.tblLocalSummary.setHorizontalHeaderItem(4, item)
-        item = QtGui.QTableWidgetItem()
-        self.tblLocalSummary.setHorizontalHeaderItem(5, item)
         self.tblLocalSummary.horizontalHeader().setVisible(True)
-        self.tblLocalSummary.horizontalHeader().setDefaultSectionSize(57)
+        self.tblLocalSummary.horizontalHeader().setDefaultSectionSize(85)
+        self.tblLocalSummary.horizontalHeader().setMinimumSectionSize(20)
         self.tblLocalSummary.verticalHeader().setVisible(False)
         self.tblLocalSummary.verticalHeader().setDefaultSectionSize(20)
         self.cmbIdColumn = QtGui.QComboBox(Form_Parameter)
@@ -156,6 +153,13 @@ class Ui_Form_Parameter(object):
         self.label_4 = QtGui.QLabel(Form_Parameter)
         self.label_4.setGeometry(QtCore.QRect(4, 30, 81, 16))
         self.label_4.setObjectName(_fromUtf8("label_4"))
+        self.progressBar = QtGui.QProgressBar(Form_Parameter)
+        self.progressBar.setGeometry(QtCore.QRect(120, 186, 241, 16))
+        self.progressBar.setProperty("value", 24)
+        self.progressBar.setObjectName(_fromUtf8("progressBar"))
+        self.lbl_log = QtGui.QLabel(Form_Parameter)
+        self.lbl_log.setGeometry(QtCore.QRect(110, 320, 251, 16))
+        self.lbl_log.setObjectName(_fromUtf8("lbl_log"))
 
         self.retranslateUi(Form_Parameter)
         QtCore.QMetaObject.connectSlotsByName(Form_Parameter)
@@ -193,14 +197,11 @@ class Ui_Form_Parameter(object):
         item = self.tblLocalSummary.horizontalHeaderItem(0)
         item.setText(_translate("Form_Parameter", "ID", None))
         item = self.tblLocalSummary.horizontalHeaderItem(1)
-        item.setText(_translate("Form_Parameter", "Local I(d)", None))
+        item.setText(_translate("Form_Parameter", "I(d)", None))
         item = self.tblLocalSummary.horizontalHeaderItem(2)
-        item.setText(_translate("Form_Parameter", "E[]", None))
-        item = self.tblLocalSummary.horizontalHeaderItem(3)
-        item.setText(_translate("Form_Parameter", "V[]", None))
-        item = self.tblLocalSummary.horizontalHeaderItem(4)
         item.setText(_translate("Form_Parameter", "Z[]", None))
-        item = self.tblLocalSummary.horizontalHeaderItem(5)
+        item = self.tblLocalSummary.horizontalHeaderItem(3)
         item.setText(_translate("Form_Parameter", "P[]", None))
         self.label_4.setText(_translate("Form_Parameter", "ID Column:", None))
+        self.lbl_log.setText(_translate("Form_Parameter", "Log Message", None))
 
