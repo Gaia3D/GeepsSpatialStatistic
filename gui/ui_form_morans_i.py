@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'ui_form_morans_i.ui'
 #
-# Created: Thu Jul 10 19:23:48 2014
+# Created: Thu Jul 10 22:24:25 2014
 #      by: PyQt4 UI code generator 4.10.2
 #
 # WARNING! All changes made in this file will be lost!
@@ -87,6 +87,12 @@ class Ui_Form_Parameter(object):
         self.edtBy.setObjectName(_fromUtf8("edtBy"))
         self.btnRun = QtGui.QPushButton(Form_Parameter)
         self.btnRun.setGeometry(QtCore.QRect(4, 160, 111, 23))
+        font = QtGui.QFont()
+        font.setFamily(_fromUtf8("Tahoma"))
+        font.setPointSize(11)
+        font.setBold(True)
+        font.setWeight(75)
+        self.btnRun.setFont(font)
         self.btnRun.setObjectName(_fromUtf8("btnRun"))
         self.btnSaveChart = QtGui.QPushButton(Form_Parameter)
         self.btnSaveChart.setGeometry(QtCore.QRect(204, 160, 81, 23))
@@ -107,6 +113,8 @@ class Ui_Form_Parameter(object):
         self.tblGlobalSummary = QtGui.QTableWidget(Form_Parameter)
         self.tblGlobalSummary.setGeometry(QtCore.QRect(4, 206, 361, 111))
         self.tblGlobalSummary.setEditTriggers(QtGui.QAbstractItemView.NoEditTriggers)
+        self.tblGlobalSummary.setSelectionMode(QtGui.QAbstractItemView.SingleSelection)
+        self.tblGlobalSummary.setSelectionBehavior(QtGui.QAbstractItemView.SelectRows)
         self.tblGlobalSummary.setCornerButtonEnabled(False)
         self.tblGlobalSummary.setRowCount(1)
         self.tblGlobalSummary.setColumnCount(6)
@@ -131,8 +139,10 @@ class Ui_Form_Parameter(object):
         self.tblLocalSummary.setEnabled(True)
         self.tblLocalSummary.setGeometry(QtCore.QRect(4, 340, 361, 181))
         self.tblLocalSummary.setEditTriggers(QtGui.QAbstractItemView.NoEditTriggers)
+        self.tblLocalSummary.setSelectionMode(QtGui.QAbstractItemView.SingleSelection)
+        self.tblLocalSummary.setSelectionBehavior(QtGui.QAbstractItemView.SelectRows)
         self.tblLocalSummary.setRowCount(6)
-        self.tblLocalSummary.setColumnCount(4)
+        self.tblLocalSummary.setColumnCount(5)
         self.tblLocalSummary.setObjectName(_fromUtf8("tblLocalSummary"))
         item = QtGui.QTableWidgetItem()
         self.tblLocalSummary.setHorizontalHeaderItem(0, item)
@@ -142,8 +152,10 @@ class Ui_Form_Parameter(object):
         self.tblLocalSummary.setHorizontalHeaderItem(2, item)
         item = QtGui.QTableWidgetItem()
         self.tblLocalSummary.setHorizontalHeaderItem(3, item)
+        item = QtGui.QTableWidgetItem()
+        self.tblLocalSummary.setHorizontalHeaderItem(4, item)
         self.tblLocalSummary.horizontalHeader().setVisible(True)
-        self.tblLocalSummary.horizontalHeader().setDefaultSectionSize(85)
+        self.tblLocalSummary.horizontalHeader().setDefaultSectionSize(68)
         self.tblLocalSummary.horizontalHeader().setMinimumSectionSize(20)
         self.tblLocalSummary.verticalHeader().setVisible(False)
         self.tblLocalSummary.verticalHeader().setDefaultSectionSize(20)
@@ -197,10 +209,12 @@ class Ui_Form_Parameter(object):
         item = self.tblLocalSummary.horizontalHeaderItem(0)
         item.setText(_translate("Form_Parameter", "ID", None))
         item = self.tblLocalSummary.horizontalHeaderItem(1)
-        item.setText(_translate("Form_Parameter", "I(d)", None))
+        item.setText(_translate("Form_Parameter", "Value", None))
         item = self.tblLocalSummary.horizontalHeaderItem(2)
-        item.setText(_translate("Form_Parameter", "Z[]", None))
+        item.setText(_translate("Form_Parameter", "I(d)", None))
         item = self.tblLocalSummary.horizontalHeaderItem(3)
+        item.setText(_translate("Form_Parameter", "Z[]", None))
+        item = self.tblLocalSummary.horizontalHeaderItem(4)
         item.setText(_translate("Form_Parameter", "P[]", None))
         self.label_4.setText(_translate("Form_Parameter", "ID Column:", None))
         self.lbl_log.setText(_translate("Form_Parameter", "Log Message", None))

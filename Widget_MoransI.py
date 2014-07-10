@@ -43,6 +43,7 @@ class Widget_MoransI(QWidget,Ui_Form):
     __crrIdColumn = None
     __crrTgtColumn = None
     crrMode = None
+    result = {}
 
     def __init__(self, iface, dockwidget):
         QWidget.__init__(self)
@@ -151,11 +152,9 @@ class Widget_MoransI(QWidget,Ui_Form):
 
     def onIdColumnChanged(self, index):
         columnName = self.cmbIdColumn.currentText()
-        self.__crrIdColumn = columnName
 
     def onTgtColumnChanged(self, index):
         columnName = self.cmbTgtColumn.currentText()
-        self.__crrTgtColumn = columnName
 
     def onRdoSingleSelected(self):
         if (not self.rdoSingle.isChecked()):
@@ -192,6 +191,9 @@ class Widget_MoransI(QWidget,Ui_Form):
             alert("분석할 레이어를 선택하셔야 합니다.")
             return
 
+        self.__crrIdColumn = self.cmbIdColumn.currentText()
+        self.__crrTgtColumn = self.cmbTgtColumn.currentText()
+
         # Mode
         if not self.crrMode:
             alert("invalid mode")
@@ -207,14 +209,12 @@ class Widget_MoransI(QWidget,Ui_Form):
             if (searchDistance <= 0):
                 alert("Search Distance must grater than 0")
                 return
-            idColumn = self.cmbIdColumn.currentText()
-            tgtColumn = self.cmbTgtColumn.currentText()
-            if (idColumn == tgtColumn):
+            if (self.__crrIdColumn == self.__crrTgtColumn):
                 rc = alert(u"ID 와 Data 컬럼이 같습니다.\n계속하시겠습니까?", QMessageBox.Question)
                 if (rc != QMessageBox.Yes):
                     return
 
-            self.runSingleMoran(self.__crrLayerName, searchDistance, idColumn, tgtColumn)
+            self.runSingleMoran(self.__crrLayerName, searchDistance, self.__crrIdColumn, self.__crrTgtColumn)
 
         # 다중 거리 Moran's I인 경우
         elif (self.crrMode == "multiple"):
@@ -290,13 +290,6 @@ class Widget_MoransI(QWidget,Ui_Form):
         # ID 리스트 확보
         ids = layer.allFeatureIds()
 
-        # Weight
-        neighbors  = {}
-        weights = {}
-
-        # Data
-        dataList = []
-
         # 진행상황 표시
         self.progressBar.setVisible(True)
         self.lbl_log.setVisible(True)
@@ -304,27 +297,39 @@ class Widget_MoransI(QWidget,Ui_Form):
         self.progressBar.setMaximum(len(ids))
         self.progressBar.setAlignment(Qt.AlignLeft|Qt.AlignVCenter)
 
-        centroidList = []
-        for iID in ids:
-            iFeature = layer.getFeatures(QgsFeatureRequest(iID)).next()
-            iGeom = iFeature.geometry().centroid()
-            centroidList.append(iGeom)
-
+        # Centroid 수집
         iPrg = 0;
+        self.lbl_log.setText(u"중심점 추출중...")
+        centroidDict = {}
         for iID in ids:
+            iPrg += 1
+            self.progressBar.setValue(iPrg)
+            # UI 갱신을 위해 강제로 이벤트 처리하게 함
+            QgsApplication.processEvents()
+
             iFeature = layer.getFeatures(QgsFeatureRequest(iID)).next()
             iGeom = iFeature.geometry().centroid()
+            centroidDict[iID] = iGeom
+
+        # Weight 계산
+        neighbors  = {}
+        weights = {}
+        dataList = []
+        idList = []
+        iPrg = 0;
+        self.lbl_log.setText(u"각 지역간 인접성 계산 중...")
+        for iID in ids:
+            iGeom = centroidDict[iID]
             iRowNeighbors = []
             iRowWeights = []
 
             iPrg += 1
-            self.progressBar.setValue(iPrg + 1)
+            self.progressBar.setValue(iPrg)
             # UI 갱신을 위해 강제로 이벤트 처리하게 함
             QgsApplication.processEvents()
 
             for jID in ids:
-                jFeature = layer.getFeatures(QgsFeatureRequest(jID)).next()
-                jGeom = jFeature.geometry().centroid()
+                jGeom = centroidDict[jID]
 
                 if iID == jID: # 같은 지역인 경우
                     pass
@@ -333,56 +338,78 @@ class Widget_MoransI(QWidget,Ui_Form):
                     if dist != 0.0 and dist <= searchDistance:
                         iRowNeighbors.append(jID)
                         iRowWeights.append(1)
-
-            neighbors[iID] = iRowNeighbors
-            weights[iID] = iRowWeights
-            val = iFeature[valueColumn]
-            id = iFeature[idColumn]
-            dataList.append(val)
-
-        # Progress 제거
-        self.progressBar.setVisible(False)
-        self.lbl_log.setVisible(False)
-        #alert(u"Weight(가중치) 계산 완료")
+            if (len(iRowNeighbors) > 0):
+                neighbors[iID] = iRowNeighbors
+                weights[iID] = iRowWeights
+                iFeature = layer.getFeatures(QgsFeatureRequest(iID)).next()
+                try:
+                    val = float(iFeature[valueColumn])
+                except TypeError:
+                    val = 0.0
+                dataList.append(val)
+                idList.append(iID)
 
         w = W(neighbors, weights)
         y = np.array(dataList)
 
         # Moran's I 계산
+        self.lbl_log.setText(u"Moran's I 계산중...")
         mi = Moran(y, w, two_tailed=False)
-        tDist = "%.0f" % searchDistance
-        tI = "%.4f" % mi.I
-        tE = "%.4f" % mi.EI
-        tV = "%.4f" % mi.VI_norm
-        tZ = "%.4f" % mi.z_norm
-        tP = "%.4f" % mi.p_norm
-
-        # Local Moran
         lm = Moran_Local(y, w, transformation="r")
 
         # 분석 결과를 UI에 채우기
+        tDist = QTableWidgetItem("%.0f" % searchDistance)
+        tDist.setTextAlignment(Qt.AlignRight | Qt.AlignCenter)
+        tI = QTableWidgetItem("%.4f" % mi.I)
+        tI.setTextAlignment(Qt.AlignRight | Qt.AlignCenter)
+        tE = QTableWidgetItem("%.4f" % mi.EI)
+        tE.setTextAlignment(Qt.AlignRight | Qt.AlignCenter)
+        tV = QTableWidgetItem("%.4f" % mi.VI_norm)
+        tV.setTextAlignment(Qt.AlignRight | Qt.AlignCenter)
+        tZ = QTableWidgetItem("%.4f" % mi.z_norm)
+        tZ.setTextAlignment(Qt.AlignRight | Qt.AlignCenter)
+        tP = QTableWidgetItem("%.2f%%" % (mi.p_norm*100.0))
+        tP.setTextAlignment(Qt.AlignRight | Qt.AlignCenter)
+
         self.tblGlobalSummary.setRowCount(1)
-        self.tblGlobalSummary.setItem(0, 0, QTableWidgetItem(tDist))
-        self.tblGlobalSummary.setItem(0, 1, QTableWidgetItem(tI))
-        self.tblGlobalSummary.setItem(0, 2, QTableWidgetItem(tE))
-        self.tblGlobalSummary.setItem(0, 3, QTableWidgetItem(tV))
-        self.tblGlobalSummary.setItem(0, 4, QTableWidgetItem(tZ))
-        self.tblGlobalSummary.setItem(0, 5, QTableWidgetItem(tP))
+        self.tblGlobalSummary.setItem(0, 0, tDist)
+        self.tblGlobalSummary.setItem(0, 1, tI)
+        self.tblGlobalSummary.setItem(0, 2, tE)
+        self.tblGlobalSummary.setItem(0, 3, tV)
+        self.tblGlobalSummary.setItem(0, 4, tZ)
+        self.tblGlobalSummary.setItem(0, 5, tP)
 
-        self.tblLocalSummary.setRowCount(len(ids))
-        for iID in range(len(ids)):
-            id = ids[iID]
+        self.tblLocalSummary.setRowCount(len(idList))
+        for i in range(len(idList)):
+            id = idList[i]
             oFeature = layer.getFeatures(QgsFeatureRequest(id)).next()
-            name = "%s" % oFeature[idColumn]
-            tI = "%.5f" % float(lm.Is[iID])
-            tZ = "%.5f" % float(lm.z_sim[iID])
-            tP = "%.5f" % float(lm.p_z_sim[iID])
+            tName = QTableWidgetItem("%s" % oFeature[idColumn])
+            tName.setTextAlignment(Qt.AlignCenter)
+            tY = QTableWidgetItem("%f" % y[i])
+            tY.setTextAlignment(Qt.AlignRight | Qt.AlignCenter)
+            tI = QTableWidgetItem("%.4f" % lm.Is[i])
+            tI.setTextAlignment(Qt.AlignRight | Qt.AlignCenter)
+            tZ = QTableWidgetItem("%.4f" % lm.z_sim[i])
+            tZ.setTextAlignment(Qt.AlignRight | Qt.AlignCenter)
+            tP = QTableWidgetItem("%.2f%%" % (lm.p_z_sim[i]*100.0))
+            tP.setTextAlignment(Qt.AlignRight | Qt.AlignCenter)
 
-            self.tblLocalSummary.setItem(iID, 0, QTableWidgetItem(name))
-            self.tblLocalSummary.setItem(iID, 1, QTableWidgetItem(tZ))
-            self.tblLocalSummary.setItem(iID, 2, QTableWidgetItem(tZ))
-            self.tblLocalSummary.setItem(iID, 3, QTableWidgetItem(tP))
+            self.tblLocalSummary.setItem(i, 0, tName)
+            self.tblLocalSummary.setItem(i, 1, tY)
+            self.tblLocalSummary.setItem(i, 2, tI)
+            self.tblLocalSummary.setItem(i, 3, tZ)
+            self.tblLocalSummary.setItem(i, 4, tP)
 
+        self.result["idList"] = idList
+        self.result["centroidDict"] = centroidDict
+        self.result["neighbors"] = neighbors
+        self.result["local_I"] = lm.Is
+
+        # Progress 제거
+        self.progressBar.setVisible(False)
+        self.lbl_log.setVisible(False)
+
+        alert(u"Moran's I 지수 계산 완료")
         return True
 
     def runMultipleMoran(self):
