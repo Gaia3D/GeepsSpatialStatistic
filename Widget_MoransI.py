@@ -32,17 +32,22 @@ from xlwt import Workbook
 
 
 class Widget_MoransI(QWidget, Ui_Form):
-    result = {} # TODO: Remove
+    # 분석결과 저장
     sourceRegions = {}
     globalResults = {}
     localResults = {}
+    localNeighbors = {}
 
+    # 현재 선택 저장
     __crrLayerName = None
     __crrIdColumn = None
     __crrTgtColumn = None
     __crrMode = None
+    __crrDistance = None
     __makerArray = []
 
+    ### 생성자 및 소멸자
+    #생성자
     def __init__(self, iface, dockwidget):
         QWidget.__init__(self)
         Ui_Form.__init__(self)
@@ -61,37 +66,18 @@ class Widget_MoransI(QWidget, Ui_Form):
             self.rdoSingle.setChecked(True)
             self.__onRdoSingleSelected()
 
+    # 소멸자
     def __del__(self):
         self.disconnectGlobalSignal()
 
-    def __forceGuiUpdate(self):
-        QgsApplication.processEvents(QEventLoop.ExcludeUserInputEvents)
-
+    ### 외부용 함수
+    # 위젯이 소멸될 때 전역 이벤트 리스터 연결제거
     def disconnectGlobalSignal(self):
-        # 위젯이 소멸될 때 전역 이벤트 리스터 연결제거
         self.disconnect(self.__canvas, SIGNAL("layersChanged()"), self.__onCanvasLayersChanged)
         self.disconnect(self.__canvas, SIGNAL("renderComplete (QPainter *)"), self.__onRenderComplete)
         self.disconnect(self.__dockwidget, SIGNAL("visibilityChanged (bool)"), self.__signal_DocWidget_visibilityChanged)
 
-    # 각 부분 UI 들의 동작을 부착
-    def __connectAction(self):
-        self.connect(self.__canvas, SIGNAL("layersChanged()"), self.__onCanvasLayersChanged)
-        self.connect(self.__canvas, SIGNAL("renderComplete (QPainter *)"), self.__onRenderComplete)
-        self.connect(self.__dockwidget, SIGNAL("visibilityChanged (bool)"), self.__signal_DocWidget_visibilityChanged)
-        self.connect(self.cmbLayer, SIGNAL("currentIndexChanged(int)"), self.__onCmbLayerChanged)
-        #self.connect(self.cmbIdColumn, SIGNAL("currentIndexChanged(int)"), self.__onIdColumnChanged)
-        #self.connect(self.cmbTgtColumn, SIGNAL("currentIndexChanged(int)"), self.__onTgtColumnChanged)
-        self.connect(self.rdoSingle, SIGNAL("clicked()"), self.__onRdoSingleSelected)
-        self.connect(self.rdoMultiple, SIGNAL("clicked()"), self.__onRdoMultipleSelected)
-        self.connect(self.btnRun, SIGNAL("clicked()"), self.__onRun)
-        self.connect(self.btnSaveMap, SIGNAL("clicked()"), self.__onSaveMap)
-        self.connect(self.btnSaveResult, SIGNAL("clicked()"), self.__onSaveResult)
-        self.connect(self.tblLocalSummary, SIGNAL("cellClicked(int, int)"), self.__onLocalSummaryChanged)
-
-    # UI 동작 정의
-    def __onCanvasLayersChanged(self):
-        self.updateGuiLayerList()
-
+    # QGIS 레이어 리스트 갱신을 UI에
     def updateGuiLayerList(self):
         layers = self.__canvas.layers()
         layerNameList = []
@@ -119,50 +105,42 @@ class Widget_MoransI(QWidget, Ui_Form):
             else:
                 self.__crrLayerName = layerNameList[0]
 
+    ### UI 동작처리
+    # UI에 이벤트 핸들러 부착
+    def __connectAction(self):
+        self.connect(self.__canvas, SIGNAL("layersChanged()"), self.__onCanvasLayersChanged)
+        self.connect(self.__canvas, SIGNAL("renderComplete (QPainter *)"), self.__onRenderComplete)
+        self.connect(self.__dockwidget, SIGNAL("visibilityChanged (bool)"), self.__signal_DocWidget_visibilityChanged)
+        self.connect(self.cmbLayer, SIGNAL("currentIndexChanged(int)"), self.__onCmbLayerChanged)
+        self.connect(self.rdoSingle, SIGNAL("clicked()"), self.__onRdoSingleSelected)
+        self.connect(self.rdoMultiple, SIGNAL("clicked()"), self.__onRdoMultipleSelected)
+        self.connect(self.btnRun, SIGNAL("clicked()"), self.__onRun)
+        self.connect(self.btnSaveMap, SIGNAL("clicked()"), self.__onSaveMap)
+        self.connect(self.btnSaveResult, SIGNAL("clicked()"), self.__onSaveResult)
+        self.connect(self.tblGlobalSummary, SIGNAL("cellClicked(int, int)"), self.__onGlobalSummaryChanged)
+        self.connect(self.tblLocalSummary, SIGNAL("cellClicked(int, int)"), self.__onLocalSummaryChanged)
+
+    # UI 동작 정의
+    # QGIS의 레이어가 변경된 때
+    def __onCanvasLayersChanged(self):
+        self.updateGuiLayerList()
+
+    # 지도 그리기가 끝난 때
     def __onRenderComplete(self, painter):
         self.__drawMaker(painter)
 
+    # 위젯의 가시성 변화 시
     def __signal_DocWidget_visibilityChanged(self, visible):
         self.__resetMaker()
 
+    # 레이어 선택 콤보 변경시
     def __onCmbLayerChanged(self, index):
         layerName = self.cmbLayer.currentText()
         if (layerName != self.__crrLayerName):
             self.__crrLayerName = layerName
             self.__fillLayerColumn(layerName)
 
-    def getLayerFromName(self, layerName):
-        retLayer = None
-        for layer in self.__canvas.layers():
-            # TODO: VectorLayer 인지 확인 필요
-            if (layer.name() == layerName):
-                retLayer = layer
-        return retLayer
-
-    def __fillLayerColumn(self, layerName):
-        tgtLayer = self.getLayerFromName(layerName)
-        if (not tgtLayer):
-            self.cmbIdColumn.clear()
-            self.cmbTgtColumn.clear()
-        else:
-            fields = tgtLayer.dataProvider().fields()
-            fieldNameList = []
-            i = 0; idxIdColumn = 0; idxTgtColumn = 0
-            for field in fields:
-                fieldName = field.name()
-                fieldNameList.append(fieldName)
-                if fieldName == self.__crrIdColumn:
-                    idxIdColumn = i
-                if fieldName == self.__crrTgtColumn:
-                    idxTgtColumn = i
-                i += 1
-            self.cmbIdColumn.clear()
-            self.cmbTgtColumn.clear()
-            self.cmbIdColumn.addItems(fieldNameList)
-            self.cmbTgtColumn.addItems(fieldNameList)
-            self.cmbIdColumn.setCurrentIndex(idxIdColumn)
-            self.cmbTgtColumn.setCurrentIndex(idxTgtColumn)
-
+    # Single 모드 선택시
     def __onRdoSingleSelected(self):
         if (not self.rdoSingle.isChecked()):
             return
@@ -176,6 +154,7 @@ class Widget_MoransI(QWidget, Ui_Form):
 
         self.__crrMode = "single"
 
+    # Multiple 모드 선택시
     def __onRdoMultipleSelected(self):
         if (not self.rdoMultiple.isChecked()):
             return
@@ -189,90 +168,16 @@ class Widget_MoransI(QWidget, Ui_Form):
 
         self.__crrMode = "multiple"
 
+    # Global Summary의 행 선택시
+    def __onGlobalSummaryChanged(self, row, column):
+        #self.displayRegionMaker(row)
+        pass
+
+    # Local Summary의 행 선택시
     def __onLocalSummaryChanged(self, row, column):
-        #alert("%d:%d" % (row, column))
-        if (not self.result): return
-        id = self.result["idList"][row]
-        if (id == None): return
+        self.__displayRegionMaker(row)
 
-        # 선택 지역 객체 선택
-        layer = self.getLayerFromName(self.__crrLayerName)
-        layer.removeSelection()
-        layer.select(id)
-
-        # 선택 지역으로 줌
-        self.__canvas.zoomToSelected(layer)
-        self.__canvas.zoomOut()
-
-        # 인접으로 판단된 지역 표시
-        centroidDict = self.result["centroidDict"]
-        centroid = centroidDict[id]
-        neighbors = self.result["neighbors"]
-        nearIDs = neighbors[id]
-        searchDistance = self.result["searchDistance"]
-
-        self.__resetMaker()
-        centerPoint = centroid.vertexAt(0)
-        for nearID in nearIDs:
-            nearPoint = centroidDict[nearID].vertexAt(0)
-            line = QGraphicsLineItem(centerPoint.x(), centerPoint.y(), nearPoint.x(), nearPoint.y())
-            line.setPen(QPen(QColor(100,100,100), 1, Qt.DotLine))
-            self.__addMaker(line)
-
-        # 거리 원 표시
-        circle = QGraphicsEllipseItem(centerPoint.x()-searchDistance, centerPoint.y()-searchDistance,
-                                      searchDistance*2, searchDistance*2)
-        circle.setPen(QPen(QColor(200,0,0), 2, Qt.DashLine))
-        self.__addMaker(circle)
-
-        self.__canvas.refresh()
-
-
-    ### Maker 처리
-    def __resetMaker(self):
-        if self.__makerArray:
-            del self.__makerArray
-        self.__makerArray = []
-
-    def __addMaker(self, qGraphicsItem):
-        self.__makerArray.append(qGraphicsItem)
-
-    def __drawMaker(self, painter):
-        if not painter: return
-        if not Qt: return
-        if not self.__makerArray: return
-        if len(self.__makerArray) <= 0: return
-
-        # Matrix 계산
-        mapToPixel = self.__canvas.getCoordinateTransform()
-        pntTL = mapToPixel.toMapCoordinates(0, 0)
-        pntLR = mapToPixel.toMapCoordinates(1000, 1000)
-        pntOrg = mapToPixel.transform(0, 0)
-        scaleX = 1000.0 / (pntLR.x() - pntTL.x())
-        scaleY = -scaleX
-        trX = pntOrg.x()
-        trY = pntOrg.y()
-        transform = QTransform(scaleX, 0, 0, scaleY, trX, trY)
-
-        for maker in self.__makerArray:
-            if type(maker) is QGraphicsLineItem:
-                painter.setPen(maker.pen())
-                painter.drawLine(transform.map(maker.line()))
-            elif type(maker) is QGraphicsEllipseItem:
-                painter.setPen(maker.pen())
-                painter.setBrush(maker.brush())
-                tmpLine = QLineF(transform.map(maker.rect().topLeft()),
-                              transform.map(maker.rect().bottomRight()))
-                painter.drawEllipse(QRectF(tmpLine.x1(), tmpLine.y1(), tmpLine.dx(), tmpLine.dy()))
-            elif type(maker) is QGraphicsRectItem:
-                painter.setPen(maker.pen())
-                painter.setBrush(maker.brush())
-                rect = QRectF(transform.map(maker.rect().topLeft()),
-                              transform.map(maker.rect().bottomRight()))
-                painter.drawRect(rect)
-
-
-    ### Moran's I 실행
+    # Run 버튼 클릭시: 실행에 필요한 조건이 다 입력되었는지 확인
     def __onRun(self):
         ### 입력 데이터 검사
         # Layer
@@ -353,9 +258,169 @@ class Widget_MoransI(QWidget, Ui_Form):
             alert("invalid mode")
             return
 
+    # 지도화면 저장 버튼 클릭
+    def __onSaveMap(self):
+        dlg = QFileDialog(self)
+        dlg.setWindowTitle("Save Map As")
+        dlg.setAcceptMode(QFileDialog.AcceptSave)
+        dlg.setNameFilter("PNG (*.png)")
+        dlg.setDefaultSuffix("png")
+        if (not dlg.exec_()):
+            return
+        files = dlg.selectedFiles()
+        mapImageFile = files[0]
+        self.__saveMapToImage(mapImageFile)
+
+        if self.__saveMapToImage(mapImageFile):
+            alert(u"지도화면이 저장되었습니다.")
+        else:
+            alert(u"지도저장이 실패하였습니다.", QMessageBox.Warning)
+
+    # 액셀로 저장 버튼 클릭
+    def __onSaveResult(self):
+        # TODO: 생성된 결과가 있는지 확인 필요
+
+        dlg = QFileDialog(self)
+        dlg.setWindowTitle("Save Result As")
+        dlg.setAcceptMode(QFileDialog.AcceptSave)
+        dlg.setNameFilter("Microsoft Excel (*.xls)")
+        dlg.setDefaultSuffix("xls")
+        if (not dlg.exec_()):
+            return
+        files = dlg.selectedFiles()
+        resultFile = files[0]
+
+        if self.saveResultToExcel(resultFile):
+            alert(u"분석결과가 저장되었습니다.")
+        else:
+            alert(u"분석결과 저장이 실패하였습니다.", QMessageBox.Warning)
+
+    ### 내부 유틸 함수
+    #
+    def getLayerFromName(self, layerName):
+        retLayer = None
+        for layer in self.__canvas.layers():
+            # TODO: VectorLayer 인지 확인 필요
+            if (layer.name() == layerName):
+                retLayer = layer
+        return retLayer
+
+    # 선택된 레이어의 컬럼 정보 채우기
+    def __fillLayerColumn(self, layerName):
+        tgtLayer = self.getLayerFromName(layerName)
+        if (not tgtLayer):
+            self.cmbIdColumn.clear()
+            self.cmbTgtColumn.clear()
+        else:
+            fields = tgtLayer.dataProvider().fields()
+            fieldNameList = []
+            i = 0; idxIdColumn = 0; idxTgtColumn = 0
+            for field in fields:
+                fieldName = field.name()
+                fieldNameList.append(fieldName)
+                if fieldName == self.__crrIdColumn:
+                    idxIdColumn = i
+                if fieldName == self.__crrTgtColumn:
+                    idxTgtColumn = i
+                i += 1
+            self.cmbIdColumn.clear()
+            self.cmbTgtColumn.clear()
+            self.cmbIdColumn.addItems(fieldNameList)
+            self.cmbTgtColumn.addItems(fieldNameList)
+            self.cmbIdColumn.setCurrentIndex(idxIdColumn)
+            self.cmbTgtColumn.setCurrentIndex(idxTgtColumn)
+
+
+    ### Maker 처리
+    # Local Summary의 선택 행에 해당하는 마커 생성
+    def __displayRegionMaker(self, row):
+        distance = self.__crrDistance
+        lm = self.localResults[distance]
+        (w, ids) = lm.w.full()
+        id = ids[row]
+
+        # 선택 지역 객체 선택
+        layer = self.getLayerFromName(self.__crrLayerName)
+        layer.removeSelection()
+        layer.select(id)
+
+        # 선택 지역으로 줌
+        self.__canvas.zoomToSelected(layer)
+        self.__canvas.zoomOut()
+
+        # 인접으로 판단된 지역 표시
+        centroid = self.sourceRegions[id]["centroid"]
+        neighbors = self.localNeighbors[distance]
+        nearIDs = neighbors[id]
+
+        self.__resetMaker()
+        centerPoint = centroid.vertexAt(0)
+        for nearID in nearIDs:
+            nearPoint = self.sourceRegions[nearID]["centroid"].vertexAt(0)
+            line = QGraphicsLineItem(centerPoint.x(), centerPoint.y(), nearPoint.x(), nearPoint.y())
+            line.setPen(QPen(QColor(100,100,100), 1, Qt.DotLine))
+            self.__addMaker(line)
+
+        # 거리 원 표시
+        circle = QGraphicsEllipseItem(centerPoint.x()-distance, centerPoint.y()-distance,
+                                      distance*2, distance*2)
+        circle.setPen(QPen(QColor(200,0,0), 2, Qt.DashLine))
+        self.__addMaker(circle)
+
+        self.__canvas.refresh()
+
+    # 마커 모두 지우기
+    def __resetMaker(self):
+        if self.__makerArray:
+            del self.__makerArray
+        self.__makerArray = []
+
+    # 마커 추가
+    def __addMaker(self, qGraphicsItem):
+        self.__makerArray.append(qGraphicsItem)
+
+    # 마커를 지도 화면에 표시
+    def __drawMaker(self, painter):
+        if not painter: return
+        if not Qt: return
+        if not self.__makerArray: return
+        if len(self.__makerArray) <= 0: return
+
+        # Matrix 계산
+        mapToPixel = self.__canvas.getCoordinateTransform()
+        pntTL = mapToPixel.toMapCoordinates(0, 0)
+        pntLR = mapToPixel.toMapCoordinates(1000, 1000)
+        pntOrg = mapToPixel.transform(0, 0)
+        scaleX = 1000.0 / (pntLR.x() - pntTL.x())
+        scaleY = -scaleX
+        trX = pntOrg.x()
+        trY = pntOrg.y()
+        transform = QTransform(scaleX, 0, 0, scaleY, trX, trY)
+
+        for maker in self.__makerArray:
+            if type(maker) is QGraphicsLineItem:
+                painter.setPen(maker.pen())
+                painter.drawLine(transform.map(maker.line()))
+            elif type(maker) is QGraphicsEllipseItem:
+                painter.setPen(maker.pen())
+                painter.setBrush(maker.brush())
+                tmpLine = QLineF(transform.map(maker.rect().topLeft()),
+                              transform.map(maker.rect().bottomRight()))
+                painter.drawEllipse(QRectF(tmpLine.x1(), tmpLine.y1(), tmpLine.dx(), tmpLine.dy()))
+            elif type(maker) is QGraphicsRectItem:
+                painter.setPen(maker.pen())
+                painter.setBrush(maker.brush())
+                rect = QRectF(transform.map(maker.rect().topLeft()),
+                              transform.map(maker.rect().bottomRight()))
+                painter.drawRect(rect)
+
+    ### Moran's I 계산 수행
+    # 한개의 거리 기준으로 Moran's I 수행
     def runSingleMoran(self, layerName, searchDistance, idColumn, valueColumn):
         layer = self.getLayerFromName(layerName)
         if (not layer): return
+
+        self.__crrDistance = searchDistance
 
         self.tblGlobalSummary.setRowCount(0)
         self.tblLocalSummary.setRowCount(0)
@@ -390,15 +455,13 @@ class Widget_MoransI(QWidget, Ui_Form):
         iPrg = 0;
         self.lbl_log.setText(u"중심점 추출중...")
         self.sourceRegions = {}
-        centroidDict = {} # TODO: Remove
         for iID in ids:
             iPrg += 1
             self.progressBar.setValue(iPrg)
-            self.__forceGuiUpdate()
+            forceGuiUpdate()
 
             iFeature = layer.getFeatures(QgsFeatureRequest(iID)).next()
             iGeom = iFeature.geometry().centroid()
-            centroidDict[iID] = iGeom  # TODO: Remove
             tName = "%s" % iFeature[idColumn]
             try:
                 value = float(iFeature[valueColumn])
@@ -421,7 +484,7 @@ class Widget_MoransI(QWidget, Ui_Form):
 
             iPrg += 1
             self.progressBar.setValue(iPrg)
-            self.__forceGuiUpdate()
+            forceGuiUpdate()
 
             for jID in ids:
                 #jGeom = centroidDict[jID]
@@ -447,18 +510,50 @@ class Widget_MoransI(QWidget, Ui_Form):
 
         w = W(neighbors, weights)
         y = np.array(dataList)
+        self.localNeighbors[searchDistance] = neighbors
 
         # Moran's I 계산
         self.lbl_log.setText(u"Moran's I 계산중...")
-        self.__forceGuiUpdate()
+        forceGuiUpdate()
         mi = Moran(y, w, two_tailed=False)
         lm = Moran_Local(y, w, transformation="r")
 
+        self.globalResults = {}
+        self.localResults = {}
         self.globalResults[searchDistance] = mi
         self.localResults[searchDistance] = lm
 
         # 분석 결과를 UI에 채우기
+        self.__displayResultToUi(searchDistance)
+
+        # Moran Scatter Plot
+        #plot(lm.z_sim, lm.Is, 'ro')
+        #show()
+        plt.scatter(lm.z_sim, lm.Is)
+        plt.show()
+
+        # Progress 제거
+        self.progressBar.setVisible(False)
+        self.lbl_log.setVisible(False)
+
+        self.lbl_log.setText(u"Moran's I 지수 계산 완료")
+        forceGuiUpdate()
+        alert(u"Moran's I 지수 계산 완료")
+        return True
+
+    # 연속 거리 기준으로 Moran's I 수행
+    def runMultipleMoran(self):
+        return True
+
+    #########################
+    ### 분석결과 표현
+    # UI에 표현
+    def __displayResultToUi(self, searchDistance):
         self.__resetMaker()
+        mi = self.globalResults[searchDistance]
+        lm = self.localResults[searchDistance]
+        (w, idList) = lm.w.full()
+
         tDist = QTableWidgetItem("%.0f" % searchDistance)
         tDist.setTextAlignment(Qt.AlignRight | Qt.AlignCenter)
         tI = QTableWidgetItem("%.4f" % mi.I)
@@ -481,12 +576,11 @@ class Widget_MoransI(QWidget, Ui_Form):
         self.tblGlobalSummary.setItem(0, 5, tP)
 
         self.tblLocalSummary.setRowCount(len(idList))
-        for i in range(len(idList)):
-            id = idList[i]
-            oFeature = layer.getFeatures(QgsFeatureRequest(id)).next()
-            tName = QTableWidgetItem("%s" % oFeature[idColumn])
+        for i, id in enumerate(idList):
+            region = self.sourceRegions[id]
+            tName = QTableWidgetItem("%s" % region["name"])
             tName.setTextAlignment(Qt.AlignCenter)
-            tY = QTableWidgetItem("%f" % y[i])
+            tY = QTableWidgetItem("%f" % region["value"])
             tY.setTextAlignment(Qt.AlignRight | Qt.AlignCenter)
             tI = QTableWidgetItem("%.4f" % lm.Is[i])
             tI.setTextAlignment(Qt.AlignRight | Qt.AlignCenter)
@@ -501,67 +595,19 @@ class Widget_MoransI(QWidget, Ui_Form):
             self.tblLocalSummary.setItem(i, 3, tZ)
             self.tblLocalSummary.setItem(i, 4, tP)
 
-        # Moran Scatter Plot
-        #plot(lm.z_sim, lm.Is, 'ro')
-        #show()
-        plt.scatter(lm.z_sim, lm.Is)
-        plt.show()
-
-        # 내부 변수에 결과 저장
-        self.result["idList"] = idList
-        self.result["centroidDict"] = centroidDict
-        self.result["neighbors"] = neighbors
-        self.result["local_I"] = lm.Is
-        self.result["searchDistance"] = searchDistance
-
-        # Progress 제거
-        self.progressBar.setVisible(False)
-        self.lbl_log.setVisible(False)
-
-        self.lbl_log.setText(u"Moran's I 지수 계산 완료")
-        self.__forceGuiUpdate()
-        alert(u"Moran's I 지수 계산 완료")
-        return True
-
-    def runMultipleMoran(self):
-        return True
-
-    ### 분석결과 저장
-    def __onSaveMap(self):
-        dlg = QFileDialog(self)
-        dlg.setWindowTitle("Save Map As")
-        dlg.setAcceptMode(QFileDialog.AcceptSave)
-        dlg.setNameFilter("PNG (*.png)")
-        dlg.setDefaultSuffix("png")
-        if (not dlg.exec_()):
-            return
-        files = dlg.selectedFiles()
-        mapImageFile = files[0]
-        self.__canvas.saveAsImage(mapImageFile)
+    # 지도 화면을 이미지로 저장
+    def __saveMapToImage(self, mapImageFile):
+        try:
+            self.__canvas.saveAsImage(mapImageFile)
+        except Exception:
+            return False
 
         if os.path.isfile(mapImageFile):
-            alert(u"지도화면이 저장되었습니다.")
+            return True
         else:
-            alert(u"지도저장이 실패하였습니다.", QMessageBox.Warning)
+            return False
 
-    def __onSaveResult(self):
-        # 생성된 결과가 있는지 확인
-
-        dlg = QFileDialog(self)
-        dlg.setWindowTitle("Save Result As")
-        dlg.setAcceptMode(QFileDialog.AcceptSave)
-        dlg.setNameFilter("Microsoft Excel (*.xls)")
-        dlg.setDefaultSuffix("xls")
-        if (not dlg.exec_()):
-            return
-        files = dlg.selectedFiles()
-        resultFile = files[0]
-
-        if self.saveResultToExcel(resultFile) == True:
-            alert(u"분석결과가 저장되었습니다.")
-        else:
-            alert(u"분석결과 저장이 실패하였습니다.", QMessageBox.Warning)
-
+    # 액셀 파일로 저장
     def saveResultToExcel(self, resultFile):
         try:
             # 테이블 헤더 정보 수집

@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'ui_form_morans_i.ui'
 #
-# Created: Sat Jul 12 16:28:37 2014
+# Created: Sat Jul 12 21:21:51 2014
 #      by: PyQt4 UI code generator 4.10.2
 #
 # WARNING! All changes made in this file will be lost!
@@ -26,7 +26,7 @@ except AttributeError:
 class Ui_Form_Parameter(object):
     def setupUi(self, Form_Parameter):
         Form_Parameter.setObjectName(_fromUtf8("Form_Parameter"))
-        Form_Parameter.resize(368, 524)
+        Form_Parameter.resize(368, 548)
         self.label = QtGui.QLabel(Form_Parameter)
         self.label.setGeometry(QtCore.QRect(4, 5, 81, 16))
         self.label.setObjectName(_fromUtf8("label"))
@@ -95,20 +95,20 @@ class Ui_Form_Parameter(object):
         self.btnRun.setFont(font)
         self.btnRun.setObjectName(_fromUtf8("btnRun"))
         self.btnSaveResult = QtGui.QPushButton(Form_Parameter)
-        self.btnSaveResult.setGeometry(QtCore.QRect(284, 160, 81, 23))
+        self.btnSaveResult.setGeometry(QtCore.QRect(280, 206, 81, 23))
         self.btnSaveResult.setObjectName(_fromUtf8("btnSaveResult"))
         self.btnSaveMap = QtGui.QPushButton(Form_Parameter)
-        self.btnSaveMap.setGeometry(QtCore.QRect(200, 160, 81, 23))
+        self.btnSaveMap.setGeometry(QtCore.QRect(190, 206, 81, 23))
         self.btnSaveMap.setFlat(False)
         self.btnSaveMap.setObjectName(_fromUtf8("btnSaveMap"))
         self.label_9 = QtGui.QLabel(Form_Parameter)
-        self.label_9.setGeometry(QtCore.QRect(4, 190, 131, 16))
+        self.label_9.setGeometry(QtCore.QRect(4, 214, 131, 16))
         self.label_9.setObjectName(_fromUtf8("label_9"))
         self.label_10 = QtGui.QLabel(Form_Parameter)
-        self.label_10.setGeometry(QtCore.QRect(4, 324, 131, 16))
+        self.label_10.setGeometry(QtCore.QRect(4, 348, 131, 16))
         self.label_10.setObjectName(_fromUtf8("label_10"))
         self.tblGlobalSummary = QtGui.QTableWidget(Form_Parameter)
-        self.tblGlobalSummary.setGeometry(QtCore.QRect(4, 206, 361, 111))
+        self.tblGlobalSummary.setGeometry(QtCore.QRect(4, 230, 361, 111))
         self.tblGlobalSummary.setEditTriggers(QtGui.QAbstractItemView.NoEditTriggers)
         self.tblGlobalSummary.setSelectionMode(QtGui.QAbstractItemView.SingleSelection)
         self.tblGlobalSummary.setSelectionBehavior(QtGui.QAbstractItemView.SelectRows)
@@ -134,7 +134,7 @@ class Ui_Form_Parameter(object):
         self.tblGlobalSummary.verticalHeader().setDefaultSectionSize(20)
         self.tblLocalSummary = QtGui.QTableWidget(Form_Parameter)
         self.tblLocalSummary.setEnabled(True)
-        self.tblLocalSummary.setGeometry(QtCore.QRect(4, 340, 361, 181))
+        self.tblLocalSummary.setGeometry(QtCore.QRect(4, 364, 361, 181))
         self.tblLocalSummary.setEditTriggers(QtGui.QAbstractItemView.NoEditTriggers)
         self.tblLocalSummary.setSelectionMode(QtGui.QAbstractItemView.SingleSelection)
         self.tblLocalSummary.setSelectionBehavior(QtGui.QAbstractItemView.SelectRows)
@@ -163,12 +163,17 @@ class Ui_Form_Parameter(object):
         self.label_4.setGeometry(QtCore.QRect(4, 30, 81, 16))
         self.label_4.setObjectName(_fromUtf8("label_4"))
         self.progressBar = QtGui.QProgressBar(Form_Parameter)
-        self.progressBar.setGeometry(QtCore.QRect(120, 186, 241, 16))
+        self.progressBar.setGeometry(QtCore.QRect(130, 164, 241, 16))
         self.progressBar.setProperty("value", 24)
         self.progressBar.setObjectName(_fromUtf8("progressBar"))
         self.lbl_log = QtGui.QLabel(Form_Parameter)
-        self.lbl_log.setGeometry(QtCore.QRect(110, 320, 251, 16))
+        self.lbl_log.setGeometry(QtCore.QRect(5, 190, 361, 16))
         self.lbl_log.setObjectName(_fromUtf8("lbl_log"))
+        self.line = QtGui.QFrame(Form_Parameter)
+        self.line.setGeometry(QtCore.QRect(0, 180, 361, 16))
+        self.line.setFrameShape(QtGui.QFrame.HLine)
+        self.line.setFrameShadow(QtGui.QFrame.Sunken)
+        self.line.setObjectName(_fromUtf8("line"))
 
         self.retranslateUi(Form_Parameter)
         QtCore.QMetaObject.connectSlotsByName(Form_Parameter)
