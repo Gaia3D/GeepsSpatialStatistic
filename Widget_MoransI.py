@@ -25,25 +25,23 @@ import os
 from pysal import W, Moran, Moran_Local
 import numpy as np
 from qgis.core import *
-
+from Utlity import *
 from gui.ui_form_morans_i import Ui_Form_Parameter as Ui_Form
+import matplotlib.pyplot as plt
+from xlwt import Workbook
 
-def alert(message, mode=QMessageBox.Information):
-    mbx = QMessageBox()
-    mbx.setText(message)
-    mbx.setIcon(QMessageBox.Information)
-    if mode == QMessageBox.Question:
-        mbx.setIcon(QMessageBox.Question)
-        mbx.setStandardButtons(QMessageBox.No | QMessageBox.Yes)
-    rc = mbx.exec_()
-    return rc
 
-class Widget_MoransI(QWidget,Ui_Form):
+class Widget_MoransI(QWidget, Ui_Form):
+    result = {} # TODO: Remove
+    sourceRegions = {}
+    globalResults = {}
+    localResults = {}
+
     __crrLayerName = None
     __crrIdColumn = None
     __crrTgtColumn = None
-    crrMode = None
-    result = {}
+    __crrMode = None
+    __makerArray = []
 
     def __init__(self, iface, dockwidget):
         QWidget.__init__(self)
@@ -56,36 +54,45 @@ class Widget_MoransI(QWidget,Ui_Form):
         self.__canvas = iface.mapCanvas()
         self.__dockwidget = dockwidget
         self.__connectAction()
-        if (self.crrMode == "multiple"):
+        if (self.__crrMode == "multiple"):
             self.rdoMultiple.setChecked(True)
-            self.onRdoMultipleSelected()
+            self.__onRdoMultipleSelected()
         else:
             self.rdoSingle.setChecked(True)
-            self.onRdoSingleSelected()
+            self.__onRdoSingleSelected()
 
     def __del__(self):
-        # Disconnect Canvas
-        # Canvas
-        self.disconnect(self.__canvas, SIGNAL("layersChanged()"),
-                     self.onCanvasLayersChanged)
-        # Doc WidgetparentWidget
-        self.disconnect(self.__dockwidget, SIGNAL("visibilityChanged (bool)"),
-                     self.__signal_DocWidget_visibilityChanged)
-                
+        self.disconnectGlobalSignal()
+
+    def __forceGuiUpdate(self):
+        QgsApplication.processEvents(QEventLoop.ExcludeUserInputEvents)
+
+    def disconnectGlobalSignal(self):
+        # 위젯이 소멸될 때 전역 이벤트 리스터 연결제거
+        self.disconnect(self.__canvas, SIGNAL("layersChanged()"), self.__onCanvasLayersChanged)
+        self.disconnect(self.__canvas, SIGNAL("renderComplete (QPainter *)"), self.__onRenderComplete)
+        self.disconnect(self.__dockwidget, SIGNAL("visibilityChanged (bool)"), self.__signal_DocWidget_visibilityChanged)
+
     # 각 부분 UI 들의 동작을 부착
     def __connectAction(self):
-        QObject.connect(self.__canvas, SIGNAL("layersChanged()"), self.onCanvasLayersChanged)
-        QObject.connect(self.cmbLayer, SIGNAL("currentIndexChanged(int)"), self.onCmbLayerChanged)
-        QObject.connect(self.cmbIdColumn, SIGNAL("currentIndexChanged(int)"), self.onIdColumnChanged)
-        QObject.connect(self.cmbTgtColumn, SIGNAL("currentIndexChanged(int)"), self.onTgtColumnChanged)
-        QObject.connect(self.rdoSingle, SIGNAL("clicked()"), self.onRdoSingleSelected)
-        QObject.connect(self.rdoMultiple, SIGNAL("clicked()"), self.onRdoMultipleSelected)
-        QObject.connect(self.btnRun, SIGNAL("clicked()"), self.onRun)
-        QObject.connect(self.btnSaveMap, SIGNAL("clicked()"), self.onSaveMap)
-        QObject.connect(self.btnSaveChart, SIGNAL("clicked()"), self.onSaveChart)
-        QObject.connect(self.btnSaveResult, SIGNAL("clicked()"), self.onSaveResult)
+        self.connect(self.__canvas, SIGNAL("layersChanged()"), self.__onCanvasLayersChanged)
+        self.connect(self.__canvas, SIGNAL("renderComplete (QPainter *)"), self.__onRenderComplete)
+        self.connect(self.__dockwidget, SIGNAL("visibilityChanged (bool)"), self.__signal_DocWidget_visibilityChanged)
+        self.connect(self.cmbLayer, SIGNAL("currentIndexChanged(int)"), self.__onCmbLayerChanged)
+        #self.connect(self.cmbIdColumn, SIGNAL("currentIndexChanged(int)"), self.__onIdColumnChanged)
+        #self.connect(self.cmbTgtColumn, SIGNAL("currentIndexChanged(int)"), self.__onTgtColumnChanged)
+        self.connect(self.rdoSingle, SIGNAL("clicked()"), self.__onRdoSingleSelected)
+        self.connect(self.rdoMultiple, SIGNAL("clicked()"), self.__onRdoMultipleSelected)
+        self.connect(self.btnRun, SIGNAL("clicked()"), self.__onRun)
+        self.connect(self.btnSaveMap, SIGNAL("clicked()"), self.__onSaveMap)
+        self.connect(self.btnSaveResult, SIGNAL("clicked()"), self.__onSaveResult)
+        self.connect(self.tblLocalSummary, SIGNAL("cellClicked(int, int)"), self.__onLocalSummaryChanged)
 
-    def onCanvasLayersChanged(self):
+    # UI 동작 정의
+    def __onCanvasLayersChanged(self):
+        self.updateGuiLayerList()
+
+    def updateGuiLayerList(self):
         layers = self.__canvas.layers()
         layerNameList = []
         bCrrLayerFound = False
@@ -106,13 +113,19 @@ class Widget_MoransI(QWidget,Ui_Form):
             self.cmbLayer.setCurrentIndex(iCrrLayer)
             self.__crrLayerName = layerNameList[iCrrLayer]
         else:
-            self.onCmbLayerChanged(-1)
+            self.__onCmbLayerChanged(-1)
             if (not layers or len(layers)==0):
                 self.__crrLayerName = None
             else:
                 self.__crrLayerName = layerNameList[0]
 
-    def onCmbLayerChanged(self, index):
+    def __onRenderComplete(self, painter):
+        self.__drawMaker(painter)
+
+    def __signal_DocWidget_visibilityChanged(self, visible):
+        self.__resetMaker()
+
+    def __onCmbLayerChanged(self, index):
         layerName = self.cmbLayer.currentText()
         if (layerName != self.__crrLayerName):
             self.__crrLayerName = layerName
@@ -150,13 +163,7 @@ class Widget_MoransI(QWidget,Ui_Form):
             self.cmbIdColumn.setCurrentIndex(idxIdColumn)
             self.cmbTgtColumn.setCurrentIndex(idxTgtColumn)
 
-    def onIdColumnChanged(self, index):
-        columnName = self.cmbIdColumn.currentText()
-
-    def onTgtColumnChanged(self, index):
-        columnName = self.cmbTgtColumn.currentText()
-
-    def onRdoSingleSelected(self):
+    def __onRdoSingleSelected(self):
         if (not self.rdoSingle.isChecked()):
             return
 
@@ -167,9 +174,9 @@ class Widget_MoransI(QWidget,Ui_Form):
         self.edtCritcalZValue.setEnabled(False)
         self.gb_multiple.setEnabled(False)
 
-        self.crrMode = "single"
+        self.__crrMode = "single"
 
-    def onRdoMultipleSelected(self):
+    def __onRdoMultipleSelected(self):
         if (not self.rdoMultiple.isChecked()):
             return
 
@@ -180,34 +187,116 @@ class Widget_MoransI(QWidget,Ui_Form):
         self.edtCritcalZValue.setEnabled(True)
         self.gb_multiple.setEnabled(True)
 
-        self.crrMode = "multiple"
+        self.__crrMode = "multiple"
+
+    def __onLocalSummaryChanged(self, row, column):
+        #alert("%d:%d" % (row, column))
+        if (not self.result): return
+        id = self.result["idList"][row]
+        if (id == None): return
+
+        # 선택 지역 객체 선택
+        layer = self.getLayerFromName(self.__crrLayerName)
+        layer.removeSelection()
+        layer.select(id)
+
+        # 선택 지역으로 줌
+        self.__canvas.zoomToSelected(layer)
+        self.__canvas.zoomOut()
+
+        # 인접으로 판단된 지역 표시
+        centroidDict = self.result["centroidDict"]
+        centroid = centroidDict[id]
+        neighbors = self.result["neighbors"]
+        nearIDs = neighbors[id]
+        searchDistance = self.result["searchDistance"]
+
+        self.__resetMaker()
+        centerPoint = centroid.vertexAt(0)
+        for nearID in nearIDs:
+            nearPoint = centroidDict[nearID].vertexAt(0)
+            line = QGraphicsLineItem(centerPoint.x(), centerPoint.y(), nearPoint.x(), nearPoint.y())
+            line.setPen(QPen(QColor(100,100,100), 1, Qt.DotLine))
+            self.__addMaker(line)
+
+        # 거리 원 표시
+        circle = QGraphicsEllipseItem(centerPoint.x()-searchDistance, centerPoint.y()-searchDistance,
+                                      searchDistance*2, searchDistance*2)
+        circle.setPen(QPen(QColor(200,0,0), 2, Qt.DashLine))
+        self.__addMaker(circle)
+
+        self.__canvas.refresh()
+
+
+    ### Maker 처리
+    def __resetMaker(self):
+        if self.__makerArray:
+            del self.__makerArray
+        self.__makerArray = []
+
+    def __addMaker(self, qGraphicsItem):
+        self.__makerArray.append(qGraphicsItem)
+
+    def __drawMaker(self, painter):
+        if not painter: return
+        if not Qt: return
+        if not self.__makerArray: return
+        if len(self.__makerArray) <= 0: return
+
+        # Matrix 계산
+        mapToPixel = self.__canvas.getCoordinateTransform()
+        pntTL = mapToPixel.toMapCoordinates(0, 0)
+        pntLR = mapToPixel.toMapCoordinates(1000, 1000)
+        pntOrg = mapToPixel.transform(0, 0)
+        scaleX = 1000.0 / (pntLR.x() - pntTL.x())
+        scaleY = -scaleX
+        trX = pntOrg.x()
+        trY = pntOrg.y()
+        transform = QTransform(scaleX, 0, 0, scaleY, trX, trY)
+
+        for maker in self.__makerArray:
+            if type(maker) is QGraphicsLineItem:
+                painter.setPen(maker.pen())
+                painter.drawLine(transform.map(maker.line()))
+            elif type(maker) is QGraphicsEllipseItem:
+                painter.setPen(maker.pen())
+                painter.setBrush(maker.brush())
+                tmpLine = QLineF(transform.map(maker.rect().topLeft()),
+                              transform.map(maker.rect().bottomRight()))
+                painter.drawEllipse(QRectF(tmpLine.x1(), tmpLine.y1(), tmpLine.dx(), tmpLine.dy()))
+            elif type(maker) is QGraphicsRectItem:
+                painter.setPen(maker.pen())
+                painter.setBrush(maker.brush())
+                rect = QRectF(transform.map(maker.rect().topLeft()),
+                              transform.map(maker.rect().bottomRight()))
+                painter.drawRect(rect)
 
 
     ### Moran's I 실행
-    def onRun(self):
+    def __onRun(self):
         ### 입력 데이터 검사
         # Layer
         if (not self.__crrLayerName):
-            alert("분석할 레이어를 선택하셔야 합니다.")
+            alert(u"분석할 레이어를 선택하셔야 합니다.")
             return
 
         self.__crrIdColumn = self.cmbIdColumn.currentText()
         self.__crrTgtColumn = self.cmbTgtColumn.currentText()
 
         # Mode
-        if not self.crrMode:
-            alert("invalid mode")
+        if not self.__crrMode:
+            alert(u"invalid mode")
             return
 
         # 단일 거리 Moran's I인 경우
-        if (self.crrMode == "single"):
+        if (self.__crrMode == "single"):
             try:
                 searchDistance = float(self.edtSearchDistance.text())
             except ValueError:
-                alert("Search Distance must be entered")
+                alert(u"검색 거리를 입력하셔야 합니다.")
                 return
             if (searchDistance <= 0):
-                alert("Search Distance must grater than 0")
+                alert(u"검색 거리는 0보다 커야 합니다.")
                 return
             if (self.__crrIdColumn == self.__crrTgtColumn):
                 rc = alert(u"ID 와 Data 컬럼이 같습니다.\n계속하시겠습니까?", QMessageBox.Question)
@@ -217,38 +306,38 @@ class Widget_MoransI(QWidget,Ui_Form):
             self.runSingleMoran(self.__crrLayerName, searchDistance, self.__crrIdColumn, self.__crrTgtColumn)
 
         # 다중 거리 Moran's I인 경우
-        elif (self.crrMode == "multiple"):
+        elif (self.__crrMode == "multiple"):
             try:
                 criticalZValue = float(self.edtCritcalZValue.text())
             except ValueError:
-                alert("Search Distance must be entered")
+                alert(u"유의기준 Z값(Critical Z-Value)을 입력하셔야 합니다.")
                 return
 
             try:
                 fromValue = float(self.edtFrom.text())
             except ValueError:
-                alert("Distance Range From must be entered")
+                alert(u"검색 거리 From을 숫자로 입력하셔야 합니다.")
                 return
             if (fromValue <= 0):
-                alert("Distance Range From must grater than 0")
+                alert(u"검색 거리 From은 0보다 커야 합니다.")
                 return
 
             try:
                 toValue = float(self.edtTo.text())
             except ValueError:
-                alert("Distance Range To must be entered")
+                alert(u"검색 거리 To를 숫자로 입력하셔야 합니다.")
                 return
             if (toValue <= 0):
-                alert("Distance Range To must grater than 0")
+                alert(u"검색 거리 To는 0보다 커야 합니다.")
                 return
 
             try:
                 byValue = float(self.edtBy.text())
             except ValueError:
-                alert("Distance Range By must be entered")
+                alert(u"검색 거리 By를 숫자로 입력하셔야 합니다.")
                 return
             if (byValue <= 0):
-                alert("Distance Range By must grater than 0")
+                alert(u"검색 거리 By는 0보다 커야 합니다.")
                 return
 
             if (fromValue >= toValue):
@@ -300,16 +389,22 @@ class Widget_MoransI(QWidget,Ui_Form):
         # Centroid 수집
         iPrg = 0;
         self.lbl_log.setText(u"중심점 추출중...")
-        centroidDict = {}
+        self.sourceRegions = {}
+        centroidDict = {} # TODO: Remove
         for iID in ids:
             iPrg += 1
             self.progressBar.setValue(iPrg)
-            # UI 갱신을 위해 강제로 이벤트 처리하게 함
-            QgsApplication.processEvents()
+            self.__forceGuiUpdate()
 
             iFeature = layer.getFeatures(QgsFeatureRequest(iID)).next()
             iGeom = iFeature.geometry().centroid()
-            centroidDict[iID] = iGeom
+            centroidDict[iID] = iGeom  # TODO: Remove
+            tName = "%s" % iFeature[idColumn]
+            try:
+                value = float(iFeature[valueColumn])
+            except TypeError:
+                value = 0.0
+            self.sourceRegions[iID] = {"name": tName, "centroid": iGeom, "value": value}
 
         # Weight 계산
         neighbors  = {}
@@ -319,17 +414,18 @@ class Widget_MoransI(QWidget,Ui_Form):
         iPrg = 0;
         self.lbl_log.setText(u"각 지역간 인접성 계산 중...")
         for iID in ids:
-            iGeom = centroidDict[iID]
+            #iGeom = centroidDict[iID]
+            iGeom = self.sourceRegions[iID]["centroid"]
             iRowNeighbors = []
             iRowWeights = []
 
             iPrg += 1
             self.progressBar.setValue(iPrg)
-            # UI 갱신을 위해 강제로 이벤트 처리하게 함
-            QgsApplication.processEvents()
+            self.__forceGuiUpdate()
 
             for jID in ids:
-                jGeom = centroidDict[jID]
+                #jGeom = centroidDict[jID]
+                jGeom = self.sourceRegions[jID]["centroid"]
 
                 if iID == jID: # 같은 지역인 경우
                     pass
@@ -354,10 +450,15 @@ class Widget_MoransI(QWidget,Ui_Form):
 
         # Moran's I 계산
         self.lbl_log.setText(u"Moran's I 계산중...")
+        self.__forceGuiUpdate()
         mi = Moran(y, w, two_tailed=False)
         lm = Moran_Local(y, w, transformation="r")
 
+        self.globalResults[searchDistance] = mi
+        self.localResults[searchDistance] = lm
+
         # 분석 결과를 UI에 채우기
+        self.__resetMaker()
         tDist = QTableWidgetItem("%.0f" % searchDistance)
         tDist.setTextAlignment(Qt.AlignRight | Qt.AlignCenter)
         tI = QTableWidgetItem("%.4f" % mi.I)
@@ -400,15 +501,25 @@ class Widget_MoransI(QWidget,Ui_Form):
             self.tblLocalSummary.setItem(i, 3, tZ)
             self.tblLocalSummary.setItem(i, 4, tP)
 
+        # Moran Scatter Plot
+        #plot(lm.z_sim, lm.Is, 'ro')
+        #show()
+        plt.scatter(lm.z_sim, lm.Is)
+        plt.show()
+
+        # 내부 변수에 결과 저장
         self.result["idList"] = idList
         self.result["centroidDict"] = centroidDict
         self.result["neighbors"] = neighbors
         self.result["local_I"] = lm.Is
+        self.result["searchDistance"] = searchDistance
 
         # Progress 제거
         self.progressBar.setVisible(False)
         self.lbl_log.setVisible(False)
 
+        self.lbl_log.setText(u"Moran's I 지수 계산 완료")
+        self.__forceGuiUpdate()
         alert(u"Moran's I 지수 계산 완료")
         return True
 
@@ -416,7 +527,7 @@ class Widget_MoransI(QWidget,Ui_Form):
         return True
 
     ### 분석결과 저장
-    def onSaveMap(self):
+    def __onSaveMap(self):
         dlg = QFileDialog(self)
         dlg.setWindowTitle("Save Map As")
         dlg.setAcceptMode(QFileDialog.AcceptSave)
@@ -433,42 +544,78 @@ class Widget_MoransI(QWidget,Ui_Form):
         else:
             alert(u"지도저장이 실패하였습니다.", QMessageBox.Warning)
 
-    def onSaveChart(self):
-        # 생성된 차트가 있는지 확인
-
-
-        dlg = QFileDialog(self)
-        dlg.setWindowTitle("Save Chart As")
-        dlg.setAcceptMode(QFileDialog.AcceptSave)
-        dlg.setNameFilter("PNG (*.png)")
-        dlg.setDefaultSuffix("png")
-        if (not dlg.exec_()):
-            return
-        files = dlg.selectedFiles()
-        graphImageFile = files[0]
-        #self.__canvas.saveAsImage(graphImageFile)
-
-        if os.path.isfile(graphImageFile):
-            alert(u"그래프가 저장되었습니다.")
-        else:
-            alert(u"그래프 저장이 실패하였습니다.", QMessageBox.Warning)
-
-    def onSaveResult(self):
+    def __onSaveResult(self):
         # 생성된 결과가 있는지 확인
 
         dlg = QFileDialog(self)
         dlg.setWindowTitle("Save Result As")
         dlg.setAcceptMode(QFileDialog.AcceptSave)
-        dlg.setNameFilter("Plane Text (*.txt)")
-        dlg.setDefaultSuffix("txt")
+        dlg.setNameFilter("Microsoft Excel (*.xls)")
+        dlg.setDefaultSuffix("xls")
         if (not dlg.exec_()):
             return
         files = dlg.selectedFiles()
         resultFile = files[0]
-        #self.__canvas.saveAsImage(resultFile)
 
-        if os.path.isfile(resultFile):
+        if self.saveResultToExcel(resultFile) == True:
             alert(u"분석결과가 저장되었습니다.")
         else:
-            alert(u"분셕결과 저장이 실패하였습니다.", QMessageBox.Warning)
+            alert(u"분석결과 저장이 실패하였습니다.", QMessageBox.Warning)
 
+    def saveResultToExcel(self, resultFile):
+        try:
+            # 테이블 헤더 정보 수집
+            globalHeader = []
+            numGlobalColumn = self.tblGlobalSummary.columnCount()
+            for i in range(numGlobalColumn):
+                headerText = self.tblGlobalSummary.horizontalHeaderItem(i).text()
+                globalHeader.append(headerText)
+
+            localHeader = []
+            numLocalColumn = self.tblLocalSummary.columnCount()
+            for i in range(numLocalColumn):
+                headerText = self.tblLocalSummary.horizontalHeaderItem(i).text()
+                localHeader.append(headerText)
+
+            # Global Moran 기록
+            book = Workbook("UTF-8")
+            globalSheet = book.add_sheet("Global Moran's I")
+            for i in range(len(globalHeader)):
+                globalSheet.write(0, i, globalHeader[i])
+
+            for i, distance in enumerate(self.globalResults):
+                mi = self.globalResults[distance]
+                globalSheet.write(i+1, 0, "%.0f" % distance)
+                globalSheet.write(i+1, 1, "%.4f" % mi.I)
+                globalSheet.write(i+1, 2, "%.4f" % mi.EI)
+                globalSheet.write(i+1, 3, "%.4f" % mi.VI_norm)
+                globalSheet.write(i+1, 4, "%.4f" % mi.z_norm)
+                globalSheet.write(i+1, 5, "%.2f%%" % (mi.p_norm*100.0))
+
+            # Local Moran 기록
+            for i, distance in enumerate(self.localResults):
+                lm = self.localResults[distance]
+                localSheet = book.add_sheet(u"Local I (%d)" % distance)
+                for col in range(len(localHeader)):
+                    localSheet.write(0, col, localHeader[col])
+
+                (w, ids) = lm.w.full()
+                for j, id in enumerate(ids):
+                    region = self.sourceRegions[id]
+                    if not region:
+                        continue
+                    localSheet.write(j+1, 0, region["name"])
+                    localSheet.write(j+1, 1, region["value"])
+                    localSheet.write(j+1, 2, "%.4f" % lm.Is[j])
+                    localSheet.write(j+1, 3, "%.4f" % lm.z_sim[j])
+                    localSheet.write(j+1, 4, "%.2f%%" % (lm.p_z_sim[j]*100.0))
+
+            # 최종 저장
+            book.save(resultFile)
+        except Exception:
+            return False
+
+        if os.path.isfile(resultFile):
+            return True
+        else:
+            return False

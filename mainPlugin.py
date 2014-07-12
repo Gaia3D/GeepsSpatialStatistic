@@ -28,29 +28,36 @@ from PyQt4.QtCore import *
 # Import the code for the dialog
 import os.path
 from Widget_MoransI import Widget_MoransI
+from Utlity import *
 
-class GeepsWidget(object):
+class WidgetContainer(object):
 
-    def __init__(self, iface):
+    def __init__(self, iface, classTemplet, title, objectName, dockType=Qt.RightDockWidgetArea):
         self.__iface = iface
         self.__dockwidget = None
         self.__oloWidget = None
+        self.__classTemplet = classTemplet
+        self.__title = title
+        self.__objectName = objectName
+        self.__dockType = dockType
 
     # Private
     def __setDocWidget(self):
-        self.__dockwidget = QDockWidget(QApplication.translate("MoransIWidget", "Moran's I Statistic"), self.__iface.mainWindow() )
-        self.__dockwidget.setObjectName("dwMoransIWidget")
-        self.__oloWidget = Widget_MoransI(self.__iface, self.__dockwidget)
+        self.__dockwidget = QDockWidget(self.__title, self.__iface.mainWindow() )
+        self.__dockwidget.setObjectName(self.__objectName)
+        self.__oloWidget = self.__classTemplet(self.__iface, self.__dockwidget)
         self.__dockwidget.setWidget(self.__oloWidget)
-        self.__oloWidget.onCanvasLayersChanged()
+        self.__oloWidget.updateGuiLayerList()
 
     def __initGui(self):
         self.__setDocWidget()
-        self.__iface.addDockWidget( Qt.RightDockWidgetArea, self.__dockwidget)
+        self.__iface.addDockWidget(self.__dockType, self.__dockwidget)
 
     def __unload(self):
         self.__dockwidget.close()
         self.__iface.removeDockWidget( self.__dockwidget )
+        # 이벤트 헨들러가 자동제거 되지 않아 강제로 제거
+        self.__oloWidget.disconnectGlobalSignal()
         del self.__oloWidget
         self.__dockwidget = None
 
@@ -98,7 +105,7 @@ class GeepsSpStats:
                 QCoreApplication.installTranslator(self.translator)
 
         # Overview
-        self.crrWidget = GeepsWidget(iface)
+        self.crrWidget = WidgetContainer(iface, Widget_MoransI, "Moran's I Statistic", "objWidgetMoran")
 
     # noinspection PyMethodMayBeStatic
     def tr(self, message):

@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'ui_form_morans_i.ui'
 #
-# Created: Thu Jul 10 22:24:25 2014
+# Created: Sat Jul 12 16:28:37 2014
 #      by: PyQt4 UI code generator 4.10.2
 #
 # WARNING! All changes made in this file will be lost!
@@ -94,14 +94,11 @@ class Ui_Form_Parameter(object):
         font.setWeight(75)
         self.btnRun.setFont(font)
         self.btnRun.setObjectName(_fromUtf8("btnRun"))
-        self.btnSaveChart = QtGui.QPushButton(Form_Parameter)
-        self.btnSaveChart.setGeometry(QtCore.QRect(204, 160, 81, 23))
-        self.btnSaveChart.setObjectName(_fromUtf8("btnSaveChart"))
         self.btnSaveResult = QtGui.QPushButton(Form_Parameter)
         self.btnSaveResult.setGeometry(QtCore.QRect(284, 160, 81, 23))
         self.btnSaveResult.setObjectName(_fromUtf8("btnSaveResult"))
         self.btnSaveMap = QtGui.QPushButton(Form_Parameter)
-        self.btnSaveMap.setGeometry(QtCore.QRect(124, 160, 81, 23))
+        self.btnSaveMap.setGeometry(QtCore.QRect(200, 160, 81, 23))
         self.btnSaveMap.setFlat(False)
         self.btnSaveMap.setObjectName(_fromUtf8("btnSaveMap"))
         self.label_9 = QtGui.QLabel(Form_Parameter)
@@ -189,13 +186,12 @@ class Ui_Form_Parameter(object):
         self.label_7.setText(_translate("Form_Parameter", "To:", None))
         self.label_8.setText(_translate("Form_Parameter", "By:", None))
         self.btnRun.setText(_translate("Form_Parameter", "RUN", None))
-        self.btnSaveChart.setText(_translate("Form_Parameter", "Save Chart", None))
         self.btnSaveResult.setText(_translate("Form_Parameter", "Save Result", None))
         self.btnSaveMap.setText(_translate("Form_Parameter", "Save Map", None))
         self.label_9.setText(_translate("Form_Parameter", "Global Summary:", None))
         self.label_10.setText(_translate("Form_Parameter", "Local Summary:", None))
         item = self.tblGlobalSummary.horizontalHeaderItem(0)
-        item.setText(_translate("Form_Parameter", "Dist(d)", None))
+        item.setText(_translate("Form_Parameter", "Distance", None))
         item = self.tblGlobalSummary.horizontalHeaderItem(1)
         item.setText(_translate("Form_Parameter", "I(d)", None))
         item = self.tblGlobalSummary.horizontalHeaderItem(2)

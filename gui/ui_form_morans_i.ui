@@ -255,19 +255,6 @@
     <string>RUN</string>
    </property>
   </widget>
-  <widget class="QPushButton" name="btnSaveChart">
-   <property name="geometry">
-    <rect>
-     <x>204</x>
-     <y>160</y>
-     <width>81</width>
-     <height>23</height>
-    </rect>
-   </property>
-   <property name="text">
-    <string>Save Chart</string>
-   </property>
-  </widget>
   <widget class="QPushButton" name="btnSaveResult">
    <property name="geometry">
     <rect>
@@ -284,7 +271,7 @@
   <widget class="QPushButton" name="btnSaveMap">
    <property name="geometry">
     <rect>
-     <x>124</x>
+     <x>200</x>
      <y>160</y>
      <width>81</width>
      <height>23</height>
@@ -365,7 +352,7 @@
    <row/>
    <column>
     <property name="text">
-     <string>Dist(d)</string>
+     <string>Distance</string>
     </property>
    </column>
    <column>
