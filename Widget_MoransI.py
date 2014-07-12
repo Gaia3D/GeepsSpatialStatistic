@@ -208,7 +208,11 @@ class Widget_MoransI(QWidget, Ui_Form):
                 if (rc != QMessageBox.Yes):
                     return
 
-            self.runSingleMoran(self.__crrLayerName, searchDistance, self.__crrIdColumn, self.__crrTgtColumn)
+            if self.runSingleMoran(self.__crrLayerName, searchDistance, self.__crrIdColumn, self.__crrTgtColumn):
+                alert(u"Moran's I 지수 계산 완료")
+            else:
+                alert(u"Moran's I 지수 계산 실패", QMessageBox.Warning)
+
 
         # 다중 거리 Moran's I인 경우
         elif (self.__crrMode == "multiple"):
@@ -252,7 +256,10 @@ class Widget_MoransI(QWidget, Ui_Form):
                 alert(u"Distance Range의 By는 (From-To)보다 작거나 같아야 합니다.")
                 return
 
-            self.runMultipleMoran()
+            if self.runMultipleMoran(self.__crrLayerName, fromValue, toValue, byValue, self.__crrIdColumn, self.__crrTgtColumn):
+                alert(u"Moran's I 지수 계산 완료")
+            else:
+                alert(u"Moran's I 지수 계산 실패", QMessageBox.Warning)
 
         else:
             alert("invalid mode")
@@ -290,7 +297,7 @@ class Widget_MoransI(QWidget, Ui_Form):
         files = dlg.selectedFiles()
         resultFile = files[0]
 
-        if self.saveResultToExcel(resultFile):
+        if self.__saveResultToExcel(resultFile):
             alert(u"분석결과가 저장되었습니다.")
         else:
             alert(u"분석결과 저장이 실패하였습니다.", QMessageBox.Warning)
@@ -414,39 +421,11 @@ class Widget_MoransI(QWidget, Ui_Form):
                               transform.map(maker.rect().bottomRight()))
                 painter.drawRect(rect)
 
-    ### Moran's I 계산 수행
-    # 한개의 거리 기준으로 Moran's I 수행
-    def runSingleMoran(self, layerName, searchDistance, idColumn, valueColumn):
-        layer = self.getLayerFromName(layerName)
-        if (not layer): return
-
-        self.__crrDistance = searchDistance
-
-        self.tblGlobalSummary.setRowCount(0)
-        self.tblLocalSummary.setRowCount(0)
-
-        # Layer 정보 확보
-        layerType = layer.geometryType();
-        layerTypeName = ""
-        if layerType == QGis.Point:
-            layerTypeName = "Point"
-        elif layerType == QGis.Line:
-            layerTypeName = "Line"
-        elif layerType == QGis.Polygon:
-            layerTypeName = "Polygon"
-        else:
-            layerTypeName = "Unknown"
-        crs = layer.crs()
-
-        # 객체 Centroid 수집
-        ids = layer.allFeatureIds()
-
+    def __collectRegionInfo(self, layer, idColumn, valueColumn):
         # ID 리스트 확보
         ids = layer.allFeatureIds()
 
         # 진행상황 표시
-        self.progressBar.setVisible(True)
-        self.lbl_log.setVisible(True)
         self.lbl_log.setText(u"Weight Matrix 계산중...")
         self.progressBar.setMaximum(len(ids))
         self.progressBar.setAlignment(Qt.AlignLeft|Qt.AlignVCenter)
@@ -468,7 +447,9 @@ class Widget_MoransI(QWidget, Ui_Form):
             except TypeError:
                 value = 0.0
             self.sourceRegions[iID] = {"name": tName, "centroid": iGeom, "value": value}
+        return ids
 
+    def __calcWeight(self, layer, ids, searchDistance, valueColumn):
         # Weight 계산
         neighbors  = {}
         weights = {}
@@ -512,38 +493,68 @@ class Widget_MoransI(QWidget, Ui_Form):
         y = np.array(dataList)
         self.localNeighbors[searchDistance] = neighbors
 
-        # Moran's I 계산
-        self.lbl_log.setText(u"Moran's I 계산중...")
-        forceGuiUpdate()
-        mi = Moran(y, w, two_tailed=False)
-        lm = Moran_Local(y, w, transformation="r")
+        return w, y
 
-        self.globalResults = {}
-        self.localResults = {}
-        self.globalResults[searchDistance] = mi
-        self.localResults[searchDistance] = lm
-
-        # 분석 결과를 UI에 채우기
-        self.__displayResultToUi(searchDistance)
-
-        # Moran Scatter Plot
-        #plot(lm.z_sim, lm.Is, 'ro')
-        #show()
+    def __drawMoranScatterPlot(self, lm):
         plt.scatter(lm.z_sim, lm.Is)
         plt.show()
 
-        # Progress 제거
-        self.progressBar.setVisible(False)
-        self.lbl_log.setVisible(False)
+    ### Moran's I 계산 수행
+    # 한개의 거리 기준으로 Moran's I 수행
+    def runSingleMoran(self, layerName, searchDistance, idColumn, valueColumn):
+        try:
+            layer = self.getLayerFromName(layerName)
+            if (not layer): return
 
-        self.lbl_log.setText(u"Moran's I 지수 계산 완료")
-        forceGuiUpdate()
-        alert(u"Moran's I 지수 계산 완료")
-        return True
+            self.__crrDistance = searchDistance
+
+            self.tblGlobalSummary.setRowCount(0)
+            self.tblLocalSummary.setRowCount(0)
+
+            self.progressBar.setVisible(True)
+            self.lbl_log.setVisible(True)
+
+            # 레이어에서 중심점, 지역명, ID 추출
+            ids = self.__collectRegionInfo(layer, idColumn, valueColumn)
+
+            # 지역간 가중치를 담은 Weight 생성
+            w, y = self.__calcWeight(layer, ids, searchDistance, valueColumn)
+
+            # Moran's I 계산
+            self.lbl_log.setText(u"Moran's I 계산중...")
+            forceGuiUpdate()
+            mi = Moran(y, w, two_tailed=False)
+            lm = Moran_Local(y, w, transformation="r")
+
+            # 결과를 맴버변수에 저장
+            self.globalResults = {}
+            self.localResults = {}
+            self.globalResults[searchDistance] = mi
+            self.localResults[searchDistance] = lm
+
+            # 분석 결과를 UI에 채우기
+            self.__displayResultToUi(searchDistance)
+
+            # Moran Scatter Plot
+            self.__drawMoranScatterPlot(lm)
+
+            # Progress 제거
+            self.progressBar.setVisible(False)
+            self.lbl_log.setVisible(False)
+
+            self.lbl_log.setText(u"Moran's I 지수 계산 완료")
+            forceGuiUpdate()
+
+            return True
+        except Exception:
+            return False
 
     # 연속 거리 기준으로 Moran's I 수행
-    def runMultipleMoran(self):
-        return True
+    def runMultipleMoran(self, layerName, fromValue, toValue, byValue, idColumn, tgtColumn):
+        try:
+            return True
+        except Exception:
+            return False
 
     #########################
     ### 분석결과 표현
@@ -608,7 +619,7 @@ class Widget_MoransI(QWidget, Ui_Form):
             return False
 
     # 액셀 파일로 저장
-    def saveResultToExcel(self, resultFile):
+    def __saveResultToExcel(self, resultFile):
         try:
             # 테이블 헤더 정보 수집
             globalHeader = []
