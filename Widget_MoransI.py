@@ -44,6 +44,7 @@ class Widget_MoransI(QWidget, Ui_Form):
     __crrTgtColumn = None
     __crrMode = None
     __crrDistance = None
+    __criticalZ = None
     __makerArray = []
 
     ### 생성자 및 소멸자
@@ -117,6 +118,8 @@ class Widget_MoransI(QWidget, Ui_Form):
         self.connect(self.btnRun, SIGNAL("clicked()"), self.__onRun)
         self.connect(self.btnSaveMap, SIGNAL("clicked()"), self.__onSaveMap)
         self.connect(self.btnSaveResult, SIGNAL("clicked()"), self.__onSaveResult)
+        self.connect(self.btnZDistPlot, SIGNAL("clicked()"), self.__onZDistPlot)
+        self.connect(self.btnScatterPlot, SIGNAL("clicked()"), self.__onScatterPlot)
         self.connect(self.tblGlobalSummary, SIGNAL("cellClicked(int, int)"), self.__onGlobalSummaryChanged)
         self.connect(self.tblLocalSummary, SIGNAL("cellClicked(int, int)"), self.__onLocalSummaryChanged)
 
@@ -170,8 +173,13 @@ class Widget_MoransI(QWidget, Ui_Form):
 
     # Global Summary의 행 선택시
     def __onGlobalSummaryChanged(self, row, column):
-        #self.displayRegionMaker(row)
-        pass
+        keys = self.globalResults.keys()
+        keys.sort()
+        for i, distance in enumerate(keys):
+            if (i == row):
+                break;
+        self.__crrDistance = distance
+        self.__displayLocalResultToUi(distance)
 
     # Local Summary의 행 선택시
     def __onLocalSummaryChanged(self, row, column):
@@ -217,7 +225,7 @@ class Widget_MoransI(QWidget, Ui_Form):
         # 다중 거리 Moran's I인 경우
         elif (self.__crrMode == "multiple"):
             try:
-                criticalZValue = float(self.edtCritcalZValue.text())
+                self.__criticalZ = float(self.edtCritcalZValue.text())
             except ValueError:
                 alert(u"유의기준 Z값(Critical Z-Value)을 입력하셔야 합니다.")
                 return
@@ -285,7 +293,9 @@ class Widget_MoransI(QWidget, Ui_Form):
 
     # 액셀로 저장 버튼 클릭
     def __onSaveResult(self):
-        # TODO: 생성된 결과가 있는지 확인 필요
+        if self.tblGlobalSummary.rowCount() <= 0:
+            alert(u"먼저 [RUN]을 눌러 분석을 수행해 주십시오.")
+            return;
 
         dlg = QFileDialog(self)
         dlg.setWindowTitle("Save Result As")
@@ -302,41 +312,31 @@ class Widget_MoransI(QWidget, Ui_Form):
         else:
             alert(u"분석결과 저장이 실패하였습니다.", QMessageBox.Warning)
 
-    ### 내부 유틸 함수
-    #
-    def getLayerFromName(self, layerName):
-        retLayer = None
-        for layer in self.__canvas.layers():
-            # TODO: VectorLayer 인지 확인 필요
-            if (layer.name() == layerName):
-                retLayer = layer
-        return retLayer
+    # Z-Dist Plot 버튼 클릭
+    def __onZDistPlot(self):
+        if self.tblGlobalSummary.rowCount() <= 0:
+            alert(u"먼저 [RUN]을 눌러 분석을 수행해 주십시오.")
+            return;
 
-    # 선택된 레이어의 컬럼 정보 채우기
-    def __fillLayerColumn(self, layerName):
-        tgtLayer = self.getLayerFromName(layerName)
-        if (not tgtLayer):
-            self.cmbIdColumn.clear()
-            self.cmbTgtColumn.clear()
+        self.__drawZDistPlot()
+
+    # Scatter Plot 버튼 클릭
+    def __onScatterPlot(self):
+        if self.tblLocalSummary.rowCount() <= 0:
+            alert(u"먼저 [RUN]을 눌러 분석을 수행해 주십시오.")
+            return;
+
+        lm = self.localResults[self.__crrDistance]
+        row = self.tblLocalSummary.currentRow()
+        if row < 0:
+            name = None
+            value = None
+            local_i = None
         else:
-            fields = tgtLayer.dataProvider().fields()
-            fieldNameList = []
-            i = 0; idxIdColumn = 0; idxTgtColumn = 0
-            for field in fields:
-                fieldName = field.name()
-                fieldNameList.append(fieldName)
-                if fieldName == self.__crrIdColumn:
-                    idxIdColumn = i
-                if fieldName == self.__crrTgtColumn:
-                    idxTgtColumn = i
-                i += 1
-            self.cmbIdColumn.clear()
-            self.cmbTgtColumn.clear()
-            self.cmbIdColumn.addItems(fieldNameList)
-            self.cmbTgtColumn.addItems(fieldNameList)
-            self.cmbIdColumn.setCurrentIndex(idxIdColumn)
-            self.cmbTgtColumn.setCurrentIndex(idxTgtColumn)
-
+            name = self.tblLocalSummary.item(row, 0).text()
+            value = float(self.tblLocalSummary.item(row, 1).text())
+            local_i = float(self.tblLocalSummary.item(row, 2).text())
+        self.__drawMoranScatterPlot(lm, name, value, local_i)
 
     ### Maker 처리
     # Local Summary의 선택 행에 해당하는 마커 생성
@@ -421,18 +421,52 @@ class Widget_MoransI(QWidget, Ui_Form):
                               transform.map(maker.rect().bottomRight()))
                 painter.drawRect(rect)
 
+    ### 내부 유틸 함수
+    #
+    def getLayerFromName(self, layerName):
+        retLayer = None
+        for layer in self.__canvas.layers():
+            # TODO: VectorLayer 인지 확인 필요
+            if (layer.name() == layerName):
+                retLayer = layer
+        return retLayer
+
+    # 선택된 레이어의 컬럼 정보 채우기
+    def __fillLayerColumn(self, layerName):
+        tgtLayer = self.getLayerFromName(layerName)
+        if (not tgtLayer):
+            self.cmbIdColumn.clear()
+            self.cmbTgtColumn.clear()
+        else:
+            fields = tgtLayer.dataProvider().fields()
+            fieldNameList = []
+            i = 0; idxIdColumn = 0; idxTgtColumn = 0
+            for field in fields:
+                fieldName = field.name()
+                fieldNameList.append(fieldName)
+                if fieldName == self.__crrIdColumn:
+                    idxIdColumn = i
+                if fieldName == self.__crrTgtColumn:
+                    idxTgtColumn = i
+                i += 1
+            self.cmbIdColumn.clear()
+            self.cmbTgtColumn.clear()
+            self.cmbIdColumn.addItems(fieldNameList)
+            self.cmbTgtColumn.addItems(fieldNameList)
+            self.cmbIdColumn.setCurrentIndex(idxIdColumn)
+            self.cmbTgtColumn.setCurrentIndex(idxTgtColumn)
+
+    # 통계처리 지역의 정보를 추출
     def __collectRegionInfo(self, layer, idColumn, valueColumn):
         # ID 리스트 확보
         ids = layer.allFeatureIds()
 
         # 진행상황 표시
-        self.lbl_log.setText(u"Weight Matrix 계산중...")
         self.progressBar.setMaximum(len(ids))
         self.progressBar.setAlignment(Qt.AlignLeft|Qt.AlignVCenter)
 
         # Centroid 수집
         iPrg = 0;
-        self.lbl_log.setText(u"중심점 추출중...")
         self.sourceRegions = {}
         for iID in ids:
             iPrg += 1
@@ -449,6 +483,7 @@ class Widget_MoransI(QWidget, Ui_Form):
             self.sourceRegions[iID] = {"name": tName, "centroid": iGeom, "value": value}
         return ids
 
+    # 기준 거리에 따른 Weight Matrix 계산
     def __calcWeight(self, layer, ids, searchDistance, valueColumn):
         # Weight 계산
         neighbors  = {}
@@ -456,7 +491,6 @@ class Widget_MoransI(QWidget, Ui_Form):
         dataList = []
         idList = []
         iPrg = 0;
-        self.lbl_log.setText(u"각 지역간 인접성 계산 중...")
         for iID in ids:
             #iGeom = centroidDict[iID]
             iGeom = self.sourceRegions[iID]["centroid"]
@@ -495,18 +529,40 @@ class Widget_MoransI(QWidget, Ui_Form):
 
         return w, y
 
-    def __drawMoranScatterPlot(self, lm):
-        plt.scatter(lm.z_sim, lm.Is)
+    # 기준거리 변화에 따른 Z(d) 변화 그래프
+    def __onZDistPlot(self):
+        distList = self.globalResults.keys()
+        distList.sort()
+        zList = []
+        for dist in distList:
+            zList.append(self.globalResults[dist].z_norm)
+
+        plt.plot(distList, zList, "b")
+        plt.plot([distList[0],distList[-1]], [self.__criticalZ, self.__criticalZ], "r")
+        plt.xlabel("Distance = d")
+        plt.ylabel("Z[d]")
+        plt.text(distList[-1], self.__criticalZ, "Critical Z-Value\n %.3f" % self.__criticalZ, color="r")
+        plt.title("Z[d]s over a range of search distance")
         plt.show()
 
+    # 원 값과 Local I 값을 그래프로
+    def __drawMoranScatterPlot(self, lm, name=None, value=0, local_i=0):
+        plt.scatter(lm.y, lm.Is)
+        plt.xlabel("Value[i]")
+        plt.ylabel("Local I[i]")
+        plt.scatter([value], [local_i], color="r", marker="s")
+        if not name is None:
+            plt.text(value, local_i, "  " + name, color="r", fontweight="bold")
+        plt.title("Moran Scatter Chart of distance %d" % self.__crrDistance)
+        plt.show()
+
+    ########################
     ### Moran's I 계산 수행
     # 한개의 거리 기준으로 Moran's I 수행
     def runSingleMoran(self, layerName, searchDistance, idColumn, valueColumn):
         try:
             layer = self.getLayerFromName(layerName)
             if (not layer): return
-
-            self.__crrDistance = searchDistance
 
             self.tblGlobalSummary.setRowCount(0)
             self.tblLocalSummary.setRowCount(0)
@@ -515,9 +571,18 @@ class Widget_MoransI(QWidget, Ui_Form):
             self.lbl_log.setVisible(True)
 
             # 레이어에서 중심점, 지역명, ID 추출
+            self.lbl_log.setText(u"중심점 추출중...")
+            forceGuiUpdate()
             ids = self.__collectRegionInfo(layer, idColumn, valueColumn)
 
+            # 결과 저장변수 초기화
+            self.globalResults = {}
+            self.localResults = {}
+            self.__resetMaker()
+
             # 지역간 가중치를 담은 Weight 생성
+            self.lbl_log.setText(u"각 지역간 인접성 계산 중...")
+            forceGuiUpdate()
             w, y = self.__calcWeight(layer, ids, searchDistance, valueColumn)
 
             # Moran's I 계산
@@ -527,16 +592,13 @@ class Widget_MoransI(QWidget, Ui_Form):
             lm = Moran_Local(y, w, transformation="r")
 
             # 결과를 맴버변수에 저장
-            self.globalResults = {}
-            self.localResults = {}
             self.globalResults[searchDistance] = mi
             self.localResults[searchDistance] = lm
 
             # 분석 결과를 UI에 채우기
-            self.__displayResultToUi(searchDistance)
-
-            # Moran Scatter Plot
-            self.__drawMoranScatterPlot(lm)
+            self.__crrDistance = searchDistance
+            self.__displayGlobalResultToUi()
+            self.__displayLocalResultToUi(searchDistance)
 
             # Progress 제거
             self.progressBar.setVisible(False)
@@ -550,41 +612,107 @@ class Widget_MoransI(QWidget, Ui_Form):
             return False
 
     # 연속 거리 기준으로 Moran's I 수행
-    def runMultipleMoran(self, layerName, fromValue, toValue, byValue, idColumn, tgtColumn):
-        try:
+    def runMultipleMoran(self, layerName, fromValue, toValue, byValue, idColumn, valueColumn):
+#        try:
+            layer = self.getLayerFromName(layerName)
+            if (not layer): return
+
+            self.tblGlobalSummary.setRowCount(0)
+            self.tblLocalSummary.setRowCount(0)
+
+            self.progressBar.setVisible(True)
+            self.lbl_log.setVisible(True)
+
+            # 레이어에서 중심점, 지역명, ID 추출
+            self.lbl_log.setText(u"중심점 추출중...")
+            forceGuiUpdate()
+            ids = self.__collectRegionInfo(layer, idColumn, valueColumn)
+
+            # 결과 저장변수 초기화
+            self.globalResults = {}
+            self.localResults = {}
+            self.__resetMaker()
+
+            searchDistance = fromValue
+            iCnt = 1
+            iTotalCnt, mod = divmod((toValue-fromValue), byValue)
+            iTotalCnt += 1
+
+            while True:
+                # 지역간 가중치를 담은 Weight 생성
+                self.lbl_log.setText(u"각 지역간 인접성 계산 중(%d/%d)..." % (iCnt, iTotalCnt))
+                forceGuiUpdate()
+                w, y = self.__calcWeight(layer, ids, searchDistance, valueColumn)
+
+                # Moran's I 계산
+                self.lbl_log.setText(u"Moran's I (%.1f)계산중..." % searchDistance)
+                forceGuiUpdate()
+                mi = Moran(y, w, two_tailed=False)
+                lm = Moran_Local(y, w, transformation="r")
+
+                # 결과를 맴버변수에 저장
+                self.globalResults[searchDistance] = mi
+                self.localResults[searchDistance] = lm
+
+                searchDistance += byValue
+                if (searchDistance > toValue): break
+
+                iCnt += 1
+
+            # 분석 결과를 UI에 채우기
+            self.__displayGlobalResultToUi()
+            self.__crrDistance = fromValue
+            self.__displayLocalResultToUi(fromValue)
+
+            # 단계에 따른 그래프
+            pass
+
+            # Progress 제거
+            self.progressBar.setVisible(False)
+            self.lbl_log.setVisible(False)
+
+            self.lbl_log.setText(u"Moran's I (%.1f) 계산 완료" % searchDistance)
+            forceGuiUpdate()
+
             return True
-        except Exception:
+#        except Exception:
             return False
 
     #########################
     ### 분석결과 표현
     # UI에 표현
-    def __displayResultToUi(self, searchDistance):
-        self.__resetMaker()
-        mi = self.globalResults[searchDistance]
+    def __displayGlobalResultToUi(self):
+        keys = self.globalResults.keys()
+        keys.sort()
+
+        self.tblGlobalSummary.setRowCount(len(keys))
+        for i, searchDistance in enumerate(keys):
+            mi = self.globalResults[searchDistance]
+            tDist = QTableWidgetItem("%.0f" % searchDistance)
+            tDist.setTextAlignment(Qt.AlignRight | Qt.AlignCenter)
+            tI = QTableWidgetItem("%.4f" % mi.I)
+            tI.setTextAlignment(Qt.AlignRight | Qt.AlignCenter)
+            tE = QTableWidgetItem("%.4f" % mi.EI)
+            tE.setTextAlignment(Qt.AlignRight | Qt.AlignCenter)
+            tV = QTableWidgetItem("%.4f" % mi.VI_norm)
+            tV.setTextAlignment(Qt.AlignRight | Qt.AlignCenter)
+            tZ = QTableWidgetItem("%.4f" % mi.z_norm)
+            tZ.setTextAlignment(Qt.AlignRight | Qt.AlignCenter)
+            tP = QTableWidgetItem("%.2f%%" % (mi.p_norm*100.0))
+            tP.setTextAlignment(Qt.AlignRight | Qt.AlignCenter)
+
+            self.tblGlobalSummary.setItem(i, 0, tDist)
+            self.tblGlobalSummary.setItem(i, 1, tI)
+            self.tblGlobalSummary.setItem(i, 2, tE)
+            self.tblGlobalSummary.setItem(i, 3, tV)
+            self.tblGlobalSummary.setItem(i, 4, tZ)
+            self.tblGlobalSummary.setItem(i, 5, tP)
+
+    def __displayLocalResultToUi(self, searchDistance):
         lm = self.localResults[searchDistance]
         (w, idList) = lm.w.full()
-
-        tDist = QTableWidgetItem("%.0f" % searchDistance)
-        tDist.setTextAlignment(Qt.AlignRight | Qt.AlignCenter)
-        tI = QTableWidgetItem("%.4f" % mi.I)
-        tI.setTextAlignment(Qt.AlignRight | Qt.AlignCenter)
-        tE = QTableWidgetItem("%.4f" % mi.EI)
-        tE.setTextAlignment(Qt.AlignRight | Qt.AlignCenter)
-        tV = QTableWidgetItem("%.4f" % mi.VI_norm)
-        tV.setTextAlignment(Qt.AlignRight | Qt.AlignCenter)
-        tZ = QTableWidgetItem("%.4f" % mi.z_norm)
-        tZ.setTextAlignment(Qt.AlignRight | Qt.AlignCenter)
-        tP = QTableWidgetItem("%.2f%%" % (mi.p_norm*100.0))
-        tP.setTextAlignment(Qt.AlignRight | Qt.AlignCenter)
-
-        self.tblGlobalSummary.setRowCount(1)
-        self.tblGlobalSummary.setItem(0, 0, tDist)
-        self.tblGlobalSummary.setItem(0, 1, tI)
-        self.tblGlobalSummary.setItem(0, 2, tE)
-        self.tblGlobalSummary.setItem(0, 3, tV)
-        self.tblGlobalSummary.setItem(0, 4, tZ)
-        self.tblGlobalSummary.setItem(0, 5, tP)
+        self.lbl_distance.setText("%.1f" % searchDistance)
+        forceGuiUpdate()
 
         self.tblLocalSummary.setRowCount(len(idList))
         for i, id in enumerate(idList):
