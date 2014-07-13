@@ -113,7 +113,7 @@
   </widget>
   <widget class="QLabel" name="lbl_m_1">
    <property name="enabled">
-    <bool>false</bool>
+    <bool>true</bool>
    </property>
    <property name="geometry">
     <rect>

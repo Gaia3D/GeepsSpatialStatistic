@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'ui_form_morans_i.ui'
 #
-# Created: Sun Jul 13 16:48:55 2014
+# Created: Sun Jul 13 19:11:22 2014
 #      by: PyQt4 UI code generator 4.10.2
 #
 # WARNING! All changes made in this file will be lost!
@@ -52,7 +52,7 @@ class Ui_Form_Parameter(object):
         self.edtSearchDistance.setGeometry(QtCore.QRect(274, 61, 91, 20))
         self.edtSearchDistance.setObjectName(_fromUtf8("edtSearchDistance"))
         self.lbl_m_1 = QtGui.QLabel(Form_Parameter)
-        self.lbl_m_1.setEnabled(False)
+        self.lbl_m_1.setEnabled(True)
         self.lbl_m_1.setGeometry(QtCore.QRect(164, 90, 101, 16))
         self.lbl_m_1.setObjectName(_fromUtf8("lbl_m_1"))
         self.edtCritcalZValue = QtGui.QLineEdit(Form_Parameter)

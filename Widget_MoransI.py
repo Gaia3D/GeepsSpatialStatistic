@@ -151,8 +151,6 @@ class Widget_MoransI(QWidget, Ui_Form):
         self.lbl_s_1.setEnabled(True)
         self.edtSearchDistance.setEnabled(True)
 
-        self.lbl_m_1.setEnabled(False)
-        self.edtCritcalZValue.setEnabled(False)
         self.gb_multiple.setEnabled(False)
 
         self.__crrMode = "single"
@@ -165,8 +163,6 @@ class Widget_MoransI(QWidget, Ui_Form):
         self.lbl_s_1.setEnabled(False)
         self.edtSearchDistance.setEnabled(False)
 
-        self.lbl_m_1.setEnabled(True)
-        self.edtCritcalZValue.setEnabled(True)
         self.gb_multiple.setEnabled(True)
 
         self.__crrMode = "multiple"
@@ -177,7 +173,7 @@ class Widget_MoransI(QWidget, Ui_Form):
         keys.sort()
         for i, distance in enumerate(keys):
             if (i == row):
-                break;
+                break
         self.__crrDistance = distance
         self.__displayLocalResultToUi(distance)
 
@@ -224,12 +220,6 @@ class Widget_MoransI(QWidget, Ui_Form):
 
         # 다중 거리 Moran's I인 경우
         elif (self.__crrMode == "multiple"):
-            try:
-                self.__criticalZ = float(self.edtCritcalZValue.text())
-            except ValueError:
-                alert(u"유의기준 Z값(Critical Z-Value)을 입력하셔야 합니다.")
-                return
-
             try:
                 fromValue = float(self.edtFrom.text())
             except ValueError:
@@ -295,7 +285,7 @@ class Widget_MoransI(QWidget, Ui_Form):
     def __onSaveResult(self):
         if self.tblGlobalSummary.rowCount() <= 0:
             alert(u"먼저 [RUN]을 눌러 분석을 수행해 주십시오.")
-            return;
+            return
 
         dlg = QFileDialog(self)
         dlg.setWindowTitle("Save Result As")
@@ -316,7 +306,16 @@ class Widget_MoransI(QWidget, Ui_Form):
     def __onZDistPlot(self):
         if self.tblGlobalSummary.rowCount() <= 0:
             alert(u"먼저 [RUN]을 눌러 분석을 수행해 주십시오.")
-            return;
+            return
+
+        if self.tblGlobalSummary.rowCount() == 1:
+            alert(u"Moran's I : Multiple 모드로 동작시에만 Z-dist plot이 가능합니다..")
+            return
+
+        try:
+            self.__criticalZ = float(self.edtCritcalZValue.text())
+        except TypeError:
+            self.__criticalZ = None
 
         self.__drawZDistPlot()
 
@@ -324,7 +323,7 @@ class Widget_MoransI(QWidget, Ui_Form):
     def __onScatterPlot(self):
         if self.tblLocalSummary.rowCount() <= 0:
             alert(u"먼저 [RUN]을 눌러 분석을 수행해 주십시오.")
-            return;
+            return
 
         lm = self.localResults[self.__crrDistance]
         row = self.tblLocalSummary.currentRow()
@@ -466,7 +465,7 @@ class Widget_MoransI(QWidget, Ui_Form):
         self.progressBar.setAlignment(Qt.AlignLeft|Qt.AlignVCenter)
 
         # Centroid 수집
-        iPrg = 0;
+        iPrg = 0
         self.sourceRegions = {}
         for iID in ids:
             iPrg += 1
@@ -490,7 +489,7 @@ class Widget_MoransI(QWidget, Ui_Form):
         weights = {}
         dataList = []
         idList = []
-        iPrg = 0;
+        iPrg = 0
         for iID in ids:
             #iGeom = centroidDict[iID]
             iGeom = self.sourceRegions[iID]["centroid"]
@@ -530,7 +529,7 @@ class Widget_MoransI(QWidget, Ui_Form):
         return w, y
 
     # 기준거리 변화에 따른 Z(d) 변화 그래프
-    def __onZDistPlot(self):
+    def __drawZDistPlot(self):
         distList = self.globalResults.keys()
         distList.sort()
         zList = []
@@ -538,10 +537,11 @@ class Widget_MoransI(QWidget, Ui_Form):
             zList.append(self.globalResults[dist].z_norm)
 
         plt.plot(distList, zList, "b")
-        plt.plot([distList[0],distList[-1]], [self.__criticalZ, self.__criticalZ], "r")
         plt.xlabel("Distance = d")
         plt.ylabel("Z[d]")
-        plt.text(distList[-1], self.__criticalZ, "Critical Z-Value\n %.3f" % self.__criticalZ, color="r")
+        if not self.__criticalZ is None:
+            plt.plot([distList[0],distList[-1]], [self.__criticalZ, self.__criticalZ], "r")
+            plt.text(distList[-1], self.__criticalZ, "Critical Z-Value\n %.3f" % self.__criticalZ, color="r")
         plt.title("Z[d]s over a range of search distance")
         plt.show()
 
