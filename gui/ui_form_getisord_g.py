@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'ui_form_getisord_g.ui'
 #
-# Created: Tue Jul 15 10:54:15 2014
+# Created: Tue Jul 15 17:41:05 2014
 #      by: PyQt4 UI code generator 4.10.2
 #
 # WARNING! All changes made in this file will be lost!
@@ -40,7 +40,7 @@ class Ui_Form_Parameter(object):
         self.cmbTgtColumn.setGeometry(QtCore.QRect(274, 27, 91, 22))
         self.cmbTgtColumn.setObjectName(_fromUtf8("cmbTgtColumn"))
         self.rdoSingle = QtGui.QRadioButton(Form_Parameter)
-        self.rdoSingle.setGeometry(QtCore.QRect(4, 64, 141, 16))
+        self.rdoSingle.setGeometry(QtCore.QRect(4, 64, 161, 16))
         self.rdoSingle.setObjectName(_fromUtf8("rdoSingle"))
         self.rdoMultiple = QtGui.QRadioButton(Form_Parameter)
         self.rdoMultiple.setGeometry(QtCore.QRect(4, 90, 161, 16))
@@ -195,13 +195,13 @@ class Ui_Form_Parameter(object):
         self.rdoSingle.setText(_translate("Form_Parameter", "Getis-Ord\'s G : Single", None))
         self.rdoMultiple.setText(_translate("Form_Parameter", "Getis-Ord\'s G : Multiple", None))
         self.lbl_s_1.setText(_translate("Form_Parameter", "Search Distance:", None))
-        self.edtSearchDistance.setText(_translate("Form_Parameter", "100000", None))
+        self.edtSearchDistance.setText(_translate("Form_Parameter", "50000", None))
         self.lbl_m_1.setText(_translate("Form_Parameter", "Critical Z-Value:", None))
         self.edtCritcalZValue.setText(_translate("Form_Parameter", "1.96", None))
         self.gb_multiple.setTitle(_translate("Form_Parameter", "Distance Range", None))
         self.label_6.setText(_translate("Form_Parameter", "From:", None))
-        self.edtFrom.setText(_translate("Form_Parameter", "50000", None))
-        self.edtTo.setText(_translate("Form_Parameter", "150000", None))
+        self.edtFrom.setText(_translate("Form_Parameter", "10000", None))
+        self.edtTo.setText(_translate("Form_Parameter", "100000", None))
         self.label_7.setText(_translate("Form_Parameter", "To:", None))
         self.label_8.setText(_translate("Form_Parameter", "By:", None))
         self.edtBy.setText(_translate("Form_Parameter", "10000", None))

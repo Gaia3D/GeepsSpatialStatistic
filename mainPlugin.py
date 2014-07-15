@@ -158,7 +158,7 @@ class GeepsSpStats:
         # Getis-Ord's G Statistic Menu
         self.onToggleGetisOrdsG = QAction(self.tr("Getis-Ord's G Statistic"), self.iface.mainWindow())
         self.menu2.addAction(self.onToggleGetisOrdsG)
-        #QObject.connect(self.onToggleGetisOrdsG, SIGNAL("toggled(bool)"), self.crrWidget.setVisible )
+        self.onToggleGetisOrdsG.triggered.connect(self.showWidgetGetisOrdsG)
 
         # Nearest neighbor statistic Menu
         self.nearestNeighborStatistic_Action  = QAction( self.tr(u"Nearest Neighbor Statistic"), self.menu2)
@@ -220,6 +220,15 @@ class GeepsSpStats:
             del self.crrWidget
             self.crrWidget = None
         self.crrWidget = WidgetContainer(self.iface, Widget_MoransI)
+        self.crrWidget.setVisible(True)
+        pass
+
+    def showWidgetGetisOrdsG(self):
+        if not self.crrWidget is None:
+            self.crrWidget.setVisible(False)
+            del self.crrWidget
+            self.crrWidget = None
+        self.crrWidget = WidgetContainer(self.iface, Widget_GetisOrdsG)
         self.crrWidget.setVisible(True)
         pass
 

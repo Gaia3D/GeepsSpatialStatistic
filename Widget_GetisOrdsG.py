@@ -12,6 +12,9 @@ from xlwt import Workbook
 
 
 class Widget_GetisOrdsG(QWidget, Ui_Form):
+    title = "Getis-Ord's G Statistic"
+    objectName = "objWidgetGetisord"
+
     # 분석결과 저장
     sourceRegions = {}
     globalResults = {}

@@ -64,7 +64,7 @@
     <rect>
      <x>4</x>
      <y>64</y>
-     <width>141</width>
+     <width>161</width>
      <height>16</height>
     </rect>
    </property>
@@ -108,7 +108,7 @@
     </rect>
    </property>
    <property name="text">
-    <string>100000</string>
+    <string>50000</string>
    </property>
   </widget>
   <widget class="QLabel" name="lbl_m_1">
@@ -181,7 +181,7 @@
      </rect>
     </property>
     <property name="text">
-     <string>50000</string>
+     <string>10000</string>
     </property>
    </widget>
    <widget class="QLineEdit" name="edtTo">
@@ -194,7 +194,7 @@
      </rect>
     </property>
     <property name="text">
-     <string>150000</string>
+     <string>100000</string>
     </property>
    </widget>
    <widget class="QLabel" name="label_7">
