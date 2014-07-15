@@ -540,6 +540,7 @@ class Widget_GetisOrdsG(QWidget, Ui_Form):
     ### Getis-Ord's G 계산 수행
     # 한개의 거리 기준으로 Getis-Ord's G수행
     def runSingleGetisOrd(self, layerName, searchDistance, idColumn, valueColumn):
+        self.__resetMaker();
         try:
             layer = self.getLayerFromName(layerName)
             if (not layer): return
@@ -593,7 +594,8 @@ class Widget_GetisOrdsG(QWidget, Ui_Form):
 
     # 연속 거리 기준으로 Getis-Ord's G 수행
     def runMultipleGetisOrd(self, layerName, fromValue, toValue, byValue, idColumn, valueColumn):
-#        try:
+        self.__resetMaker();
+        try:
             layer = self.getLayerFromName(layerName)
             if (not layer): return
 
@@ -655,7 +657,7 @@ class Widget_GetisOrdsG(QWidget, Ui_Form):
             forceGuiUpdate()
 
             return True
-#        except Exception:
+        except Exception:
             return False
 
     #########################

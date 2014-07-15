@@ -12,6 +12,9 @@ from xlwt import Workbook
 
 
 class Widget_MoransI(QWidget, Ui_Form):
+    title = "Moran's I Statistic"
+    objectName = "objWidgetMoran"
+
     # 분석결과 저장
     sourceRegions = {}
     globalResults = {}
@@ -540,6 +543,7 @@ class Widget_MoransI(QWidget, Ui_Form):
     ### Moran's I 계산 수행
     # 한개의 거리 기준으로 Moran's I 수행
     def runSingleMoran(self, layerName, searchDistance, idColumn, valueColumn):
+        self.__resetMaker();
         try:
             layer = self.getLayerFromName(layerName)
             if (not layer): return
@@ -593,7 +597,8 @@ class Widget_MoransI(QWidget, Ui_Form):
 
     # 연속 거리 기준으로 Moran's I 수행
     def runMultipleMoran(self, layerName, fromValue, toValue, byValue, idColumn, valueColumn):
-#        try:
+        self.__resetMaker();
+        try:
             layer = self.getLayerFromName(layerName)
             if (not layer): return
 
@@ -655,7 +660,7 @@ class Widget_MoransI(QWidget, Ui_Form):
             forceGuiUpdate()
 
             return True
-#        except Exception:
+        except Exception:
             return False
 
     #########################

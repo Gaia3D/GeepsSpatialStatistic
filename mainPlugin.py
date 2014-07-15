@@ -33,13 +33,13 @@ from Utlity import *
 
 class WidgetContainer(object):
 
-    def __init__(self, iface, classTemplet, title, objectName, dockType=Qt.RightDockWidgetArea):
+    def __init__(self, iface, classTemplet, dockType=Qt.RightDockWidgetArea):
         self.__iface = iface
         self.__dockwidget = None
         self.__oloWidget = None
         self.__classTemplet = classTemplet
-        self.__title = title
-        self.__objectName = objectName
+        self.__title = classTemplet.title
+        self.__objectName = classTemplet.objectName
         self.__dockType = dockType
 
     # Private
@@ -106,7 +106,7 @@ class GeepsSpStats:
                 QCoreApplication.installTranslator(self.translator)
 
         # Overview
-        self.crrWidget = WidgetContainer(iface, Widget_MoransI, "Moran's I Statistic", "objWidgetMoran")
+        #self.crrWidget = WidgetContainer(iface, Widget_MoransI)
 
     # noinspection PyMethodMayBeStatic
     def tr(self, message):
@@ -148,8 +148,7 @@ class GeepsSpStats:
         # Moran's I Statistic Menu
         self.onToggleMoransI = QAction(self.tr("Moran's I Statistic"), self.iface.mainWindow())
         self.menu1.addAction(self.onToggleMoransI)
-        QObject.connect(self.onToggleMoransI, SIGNAL("toggled(bool)"), self.crrWidget.setVisible )
-        self.onToggleMoransI.triggered.connect(self.showDlgGlobalMoransI)
+        self.onToggleMoransI.triggered.connect(self.showWidgetMoransI)
 
         ### MENU2 : Spatial Clustering
         icon = QIcon(os.path.dirname(__file__) + "/images/tree.png")
@@ -159,7 +158,7 @@ class GeepsSpStats:
         # Getis-Ord's G Statistic Menu
         self.onToggleGetisOrdsG = QAction(self.tr("Getis-Ord's G Statistic"), self.iface.mainWindow())
         self.menu2.addAction(self.onToggleGetisOrdsG)
-        QObject.connect(self.onToggleGetisOrdsG, SIGNAL("toggled(bool)"), self.crrWidget.setVisible )
+        #QObject.connect(self.onToggleGetisOrdsG, SIGNAL("toggled(bool)"), self.crrWidget.setVisible )
 
         # Nearest neighbor statistic Menu
         self.nearestNeighborStatistic_Action  = QAction( self.tr(u"Nearest Neighbor Statistic"), self.menu2)
@@ -204,8 +203,10 @@ class GeepsSpStats:
     def unload(self):
         """Removes the plugin menu item and icon from QGIS GUI."""
         self.mainMenu.deleteLater()
-        self.crrWidget.setVisible( False )
-        del self.crrWidget
+        if not self.crrWidget is None:
+            self.crrWidget.setVisible( False )
+            del self.crrWidget
+            self.crrWidget = None
 
     def getLayerList(self):
         retLayerList = []
@@ -213,7 +214,12 @@ class GeepsSpStats:
             retLayerList.append(layer.name())
         return retLayerList
 
-    def showDlgGlobalMoransI(self):
+    def showWidgetMoransI(self):
+        if not self.crrWidget is None:
+            self.crrWidget.setVisible(False)
+            del self.crrWidget
+            self.crrWidget = None
+        self.crrWidget = WidgetContainer(self.iface, Widget_MoransI)
         self.crrWidget.setVisible(True)
         pass
 
