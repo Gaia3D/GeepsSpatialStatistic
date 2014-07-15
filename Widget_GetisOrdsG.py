@@ -2,16 +2,16 @@
 from PyQt4.QtCore import *
 from PyQt4.QtGui import *
 import os
-from pysal import W, Moran, Moran_Local
+from pysal import W, G, G_Local
 import numpy as np
 from qgis.core import *
 from Utlity import *
-from gui.ui_form_morans_i import Ui_Form_Parameter as Ui_Form
+from gui.ui_form_getisord_g import Ui_Form_Parameter as Ui_Form
 import matplotlib.pyplot as plt
 from xlwt import Workbook
 
 
-class Widget_MoransI(QWidget, Ui_Form):
+class Widget_GetisOrdsG(QWidget, Ui_Form):
     # 분석결과 저장
     sourceRegions = {}
     globalResults = {}
@@ -177,7 +177,7 @@ class Widget_MoransI(QWidget, Ui_Form):
             alert(u"invalid mode")
             return
 
-        # 단일 거리 Moran's I인 경우
+        # 단일 거리 Getis-Ord's G 인 경우
         if (self.__crrMode == "single"):
             try:
                 searchDistance = float(self.edtSearchDistance.text())
@@ -192,13 +192,13 @@ class Widget_MoransI(QWidget, Ui_Form):
                 if (rc != QMessageBox.Yes):
                     return
 
-            if self.runSingleMoran(self.__crrLayerName, searchDistance, self.__crrIdColumn, self.__crrTgtColumn):
-                alert(u"Moran's I 지수 계산 완료")
+            if self.runSingleGetisOrd(self.__crrLayerName, searchDistance, self.__crrIdColumn, self.__crrTgtColumn):
+                alert(u"Getis-Ord's G 지수 계산 완료")
             else:
-                alert(u"Moran's I 지수 계산 실패", QMessageBox.Warning)
+                alert(u"Getis-Ord's G 지수 계산 실패", QMessageBox.Warning)
 
 
-        # 다중 거리 Moran's I인 경우
+        # 다중 거리 Getis-Ord's G인 경우
         elif (self.__crrMode == "multiple"):
             try:
                 fromValue = float(self.edtFrom.text())
@@ -234,10 +234,10 @@ class Widget_MoransI(QWidget, Ui_Form):
                 alert(u"Distance Range의 By는 (From-To)보다 작거나 같아야 합니다.")
                 return
 
-            if self.runMultipleMoran(self.__crrLayerName, fromValue, toValue, byValue, self.__crrIdColumn, self.__crrTgtColumn):
-                alert(u"Moran's I 지수 계산 완료")
+            if self.runMultipleGetisOrd(self.__crrLayerName, fromValue, toValue, byValue, self.__crrIdColumn, self.__crrTgtColumn):
+                alert(u"Getis-Ord's G 지수 계산 완료")
             else:
-                alert(u"Moran's I 지수 계산 실패", QMessageBox.Warning)
+                alert(u"Getis-Ord's G 지수 계산 실패", QMessageBox.Warning)
 
         else:
             alert("invalid mode")
@@ -289,7 +289,7 @@ class Widget_MoransI(QWidget, Ui_Form):
             return
 
         if self.tblGlobalSummary.rowCount() == 1:
-            alert(u"Moran's I : Multiple 모드로 동작시에만 Z-dist plot이 가능합니다..")
+            alert(u"Getis-Ord's G : Multiple 모드로 동작시에만 Z-dist plot이 가능합니다..")
             return
 
         try:
@@ -526,10 +526,10 @@ class Widget_MoransI(QWidget, Ui_Form):
         plt.show()
 
     # 원 값과 Local I 값을 그래프로
-    def __drawMoranScatterPlot(self, lm, name=None, value=0, local_i=0):
-        plt.scatter(lm.y, lm.Is)
+    def __drawMoranScatterPlot(self, lg, name=None, value=0, local_i=0):
+        plt.scatter(lg.y, lg.Gs)
         plt.xlabel("Value[i]")
-        plt.ylabel("Local I[i]")
+        plt.ylabel("Local G[i]")
         plt.scatter([value], [local_i], color="r", marker="s")
         if not name is None:
             plt.text(value, local_i, "  " + name, color="r", fontweight="bold")
@@ -537,9 +537,9 @@ class Widget_MoransI(QWidget, Ui_Form):
         plt.show()
 
     ########################
-    ### Moran's I 계산 수행
-    # 한개의 거리 기준으로 Moran's I 수행
-    def runSingleMoran(self, layerName, searchDistance, idColumn, valueColumn):
+    ### Getis-Ord's G 계산 수행
+    # 한개의 거리 기준으로 Getis-Ord's G수행
+    def runSingleGetisOrd(self, layerName, searchDistance, idColumn, valueColumn):
         try:
             layer = self.getLayerFromName(layerName)
             if (not layer): return
@@ -565,15 +565,15 @@ class Widget_MoransI(QWidget, Ui_Form):
             forceGuiUpdate()
             w, y = self.__calcWeight(layer, ids, searchDistance, valueColumn)
 
-            # Moran's I 계산
-            self.lbl_log.setText(u"Moran's I 계산중...")
+            # Getis-Ord's G 계산
+            self.lbl_log.setText(u"Getis-Ord's G 계산중...")
             forceGuiUpdate()
-            mi = Moran(y, w, two_tailed=False)
-            lm = Moran_Local(y, w, transformation="r")
+            gg = G(y, w)
+            lg = G_Local(y, w)
 
             # 결과를 맴버변수에 저장
-            self.globalResults[searchDistance] = mi
-            self.localResults[searchDistance] = lm
+            self.globalResults[searchDistance] = gg
+            self.localResults[searchDistance] = lg
 
             # 분석 결과를 UI에 채우기
             self.__crrDistance = searchDistance
@@ -584,15 +584,15 @@ class Widget_MoransI(QWidget, Ui_Form):
             self.progressBar.setVisible(False)
             self.lbl_log.setVisible(False)
 
-            self.lbl_log.setText(u"Moran's I 지수 계산 완료")
+            self.lbl_log.setText(u"Getis-Ord's G 지수 계산 완료")
             forceGuiUpdate()
 
             return True
         except Exception:
             return False
 
-    # 연속 거리 기준으로 Moran's I 수행
-    def runMultipleMoran(self, layerName, fromValue, toValue, byValue, idColumn, valueColumn):
+    # 연속 거리 기준으로 Getis-Ord's G 수행
+    def runMultipleGetisOrd(self, layerName, fromValue, toValue, byValue, idColumn, valueColumn):
 #        try:
             layer = self.getLayerFromName(layerName)
             if (not layer): return
@@ -624,15 +624,15 @@ class Widget_MoransI(QWidget, Ui_Form):
                 forceGuiUpdate()
                 w, y = self.__calcWeight(layer, ids, searchDistance, valueColumn)
 
-                # Moran's I 계산
-                self.lbl_log.setText(u"Moran's I (%.1f)계산중..." % searchDistance)
+                # Getis-Ord's G 계산
+                self.lbl_log.setText(u"Getis-Ord's G (%.1f)계산중..." % searchDistance)
                 forceGuiUpdate()
-                mi = Moran(y, w, two_tailed=False)
-                lm = Moran_Local(y, w, transformation="r")
+                gg = G(y, w)
+                lg = G_Local(y, w)
 
                 # 결과를 맴버변수에 저장
-                self.globalResults[searchDistance] = mi
-                self.localResults[searchDistance] = lm
+                self.globalResults[searchDistance] = gg
+                self.localResults[searchDistance] = lg
 
                 searchDistance += byValue
                 if (searchDistance > toValue): break
@@ -651,7 +651,7 @@ class Widget_MoransI(QWidget, Ui_Form):
             self.progressBar.setVisible(False)
             self.lbl_log.setVisible(False)
 
-            self.lbl_log.setText(u"Moran's I (%.1f) 계산 완료" % searchDistance)
+            self.lbl_log.setText(u"Getis-Ord's G (%.1f) 계산 완료" % searchDistance)
             forceGuiUpdate()
 
             return True
@@ -667,30 +667,30 @@ class Widget_MoransI(QWidget, Ui_Form):
 
         self.tblGlobalSummary.setRowCount(len(keys))
         for i, searchDistance in enumerate(keys):
-            mi = self.globalResults[searchDistance]
+            gg = self.globalResults[searchDistance]
             tDist = QTableWidgetItem("%.0f" % searchDistance)
             tDist.setTextAlignment(Qt.AlignRight | Qt.AlignCenter)
-            tI = QTableWidgetItem("%.4f" % mi.I)
-            tI.setTextAlignment(Qt.AlignRight | Qt.AlignCenter)
-            tE = QTableWidgetItem("%.4f" % mi.EI)
+            tG = QTableWidgetItem("%.4f" % gg.G)
+            tG.setTextAlignment(Qt.AlignRight | Qt.AlignCenter)
+            tE = QTableWidgetItem("%.4f" % gg.EG)
             tE.setTextAlignment(Qt.AlignRight | Qt.AlignCenter)
-            tV = QTableWidgetItem("%.4f" % mi.VI_norm)
+            tV = QTableWidgetItem("%.4f" % gg.VG)
             tV.setTextAlignment(Qt.AlignRight | Qt.AlignCenter)
-            tZ = QTableWidgetItem("%.4f" % mi.z_norm)
+            tZ = QTableWidgetItem("%.4f" % gg.z_norm)
             tZ.setTextAlignment(Qt.AlignRight | Qt.AlignCenter)
-            tP = QTableWidgetItem("%.2f%%" % (mi.p_norm*100.0))
+            tP = QTableWidgetItem("%.2f%%" % (gg.p_norm*100.0))
             tP.setTextAlignment(Qt.AlignRight | Qt.AlignCenter)
 
             self.tblGlobalSummary.setItem(i, 0, tDist)
-            self.tblGlobalSummary.setItem(i, 1, tI)
+            self.tblGlobalSummary.setItem(i, 1, tG)
             self.tblGlobalSummary.setItem(i, 2, tE)
             self.tblGlobalSummary.setItem(i, 3, tV)
             self.tblGlobalSummary.setItem(i, 4, tZ)
             self.tblGlobalSummary.setItem(i, 5, tP)
 
     def __displayLocalResultToUi(self, searchDistance):
-        lm = self.localResults[searchDistance]
-        (w, idList) = lm.w.full()
+        lg = self.localResults[searchDistance]
+        (w, idList) = lg.w.full()
         self.lbl_distance.setText("%.1f" % searchDistance)
         forceGuiUpdate()
 
@@ -701,16 +701,16 @@ class Widget_MoransI(QWidget, Ui_Form):
             tName.setTextAlignment(Qt.AlignCenter)
             tY = QTableWidgetItem("%f" % region["value"])
             tY.setTextAlignment(Qt.AlignRight | Qt.AlignCenter)
-            tI = QTableWidgetItem("%.4f" % lm.Is[i])
-            tI.setTextAlignment(Qt.AlignRight | Qt.AlignCenter)
-            tZ = QTableWidgetItem("%.4f" % lm.z_sim[i])
+            tG = QTableWidgetItem("%.4f" % lg.Gs[i])
+            tG.setTextAlignment(Qt.AlignRight | Qt.AlignCenter)
+            tZ = QTableWidgetItem("%.4f" % lg.z_sim[i])
             tZ.setTextAlignment(Qt.AlignRight | Qt.AlignCenter)
-            tP = QTableWidgetItem("%.2f%%" % (lm.p_z_sim[i]*100.0))
+            tP = QTableWidgetItem("%.2f%%" % (lg.p_z_sim[i]*100.0))
             tP.setTextAlignment(Qt.AlignRight | Qt.AlignCenter)
 
             self.tblLocalSummary.setItem(i, 0, tName)
             self.tblLocalSummary.setItem(i, 1, tY)
-            self.tblLocalSummary.setItem(i, 2, tI)
+            self.tblLocalSummary.setItem(i, 2, tG)
             self.tblLocalSummary.setItem(i, 3, tZ)
             self.tblLocalSummary.setItem(i, 4, tP)
 
@@ -742,38 +742,38 @@ class Widget_MoransI(QWidget, Ui_Form):
                 headerText = self.tblLocalSummary.horizontalHeaderItem(i).text()
                 localHeader.append(headerText)
 
-            # Global Moran 기록
+            # Global G 기록
             book = Workbook("UTF-8")
-            globalSheet = book.add_sheet("Global Moran's I")
+            globalSheet = book.add_sheet("Global Getis-Ord's G")
             for i in range(len(globalHeader)):
                 globalSheet.write(0, i, globalHeader[i])
 
             for i, distance in enumerate(self.globalResults):
-                mi = self.globalResults[distance]
+                gg = self.globalResults[distance]
                 globalSheet.write(i+1, 0, "%.0f" % distance)
-                globalSheet.write(i+1, 1, "%.4f" % mi.I)
-                globalSheet.write(i+1, 2, "%.4f" % mi.EI)
-                globalSheet.write(i+1, 3, "%.4f" % mi.VI_norm)
-                globalSheet.write(i+1, 4, "%.4f" % mi.z_norm)
-                globalSheet.write(i+1, 5, "%.2f%%" % (mi.p_norm*100.0))
+                globalSheet.write(i+1, 1, "%.4f" % gg.G)
+                globalSheet.write(i+1, 2, "%.4f" % gg.EG)
+                globalSheet.write(i+1, 3, "%.4f" % gg.VG_norm)
+                globalSheet.write(i+1, 4, "%.4f" % gg.z_norm)
+                globalSheet.write(i+1, 5, "%.2f%%" % (gg.p_norm*100.0))
 
-            # Local Moran 기록
+            # Local G 기록
             for i, distance in enumerate(self.localResults):
-                lm = self.localResults[distance]
-                localSheet = book.add_sheet(u"Local I (%d)" % distance)
+                lg = self.localResults[distance]
+                localSheet = book.add_sheet(u"Local G (%d)" % distance)
                 for col in range(len(localHeader)):
                     localSheet.write(0, col, localHeader[col])
 
-                (w, ids) = lm.w.full()
+                (w, ids) = lg.w.full()
                 for j, id in enumerate(ids):
                     region = self.sourceRegions[id]
                     if not region:
                         continue
                     localSheet.write(j+1, 0, region["name"])
                     localSheet.write(j+1, 1, region["value"])
-                    localSheet.write(j+1, 2, "%.4f" % lm.Is[j])
-                    localSheet.write(j+1, 3, "%.4f" % lm.z_sim[j])
-                    localSheet.write(j+1, 4, "%.2f%%" % (lm.p_z_sim[j]*100.0))
+                    localSheet.write(j+1, 2, "%.4f" % lg.Gs[j])
+                    localSheet.write(j+1, 3, "%.4f" % lg.z_sim[j])
+                    localSheet.write(j+1, 4, "%.2f%%" % (lg.p_z_sim[j]*100.0))
 
             # 최종 저장
             book.save(resultFile)

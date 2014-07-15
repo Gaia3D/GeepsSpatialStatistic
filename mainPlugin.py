@@ -155,7 +155,6 @@ class GeepsSpStats:
         self.help_Action  = QAction(icon, self.tr(u"About GEEPS Spatial Stats"), self.menu1)
         self.mainMenu.addAction(self.help_Action)
         self.help_Action.triggered.connect(self.showDlgGlobalMoransI)
-        """
 
         # Moran's I Statistic Menu
         self.onToggleMoransI = QAction(self.tr("Moran's I Statistic"), self.iface.mainWindow())
@@ -163,6 +162,29 @@ class GeepsSpStats:
         self.onToggleMoransI.setChecked(False)
         self.mainMenu.addAction(self.onToggleMoransI)
         QObject.connect(self.onToggleMoransI, SIGNAL("toggled(bool)"), self.crrWidget.setVisible )
+        """
+
+        ### MENU1 : spatial clusters detection
+        self.menu1 = self.mainMenu.addMenu(self.tr(u'Spatial Autocorrelation'))
+        self.mainMenu.addMenu(self.menu1)
+
+        # Moran's I Statistic Menu
+        self.onToggleMoransI = QAction(self.tr("Moran's I Statistic"), self.iface.mainWindow())
+        self.onToggleMoransI.setCheckable(True)
+        self.onToggleMoransI.setChecked(False)
+        self.menu1.addAction(self.onToggleMoransI)
+        QObject.connect(self.onToggleMoransI, SIGNAL("toggled(bool)"), self.crrWidget.setVisible )
+
+        ### MENU2 : spatial clusters detection
+        self.menu2 = self.mainMenu.addMenu(self.tr(u'Spatial Clustering'))
+        self.onToggleMoransI.setCheckable(True)
+        self.onToggleMoransI.setChecked(False)
+        self.mainMenu.addMenu(self.menu2)
+
+        # Moran's I Statistic Menu
+        self.onToggleGetisOrdsG = QAction(self.tr("Getis-Ord's G Statistic"), self.iface.mainWindow())
+        self.menu2.addAction(self.onToggleGetisOrdsG)
+        QObject.connect(self.onToggleGetisOrdsG, SIGNAL("toggled(bool)"), self.crrWidget.setVisible )
 
         ### Main Menu 등록
         menuBar = self.iface.mainWindow().menuBar()
