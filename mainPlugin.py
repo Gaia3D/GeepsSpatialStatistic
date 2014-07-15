@@ -139,33 +139,9 @@ class GeepsSpStats:
                 self.mainMenu = action.menu()
                 break
 
-        """
-        ### MENU4 : spatial clusters detection
-        self.menu4 = self.mainMenu.addMenu(self.tr(u'Spatial Clusters Detection'))
-        self.mainMenu.addMenu(self.menu4)
-
-        icon = QIcon(os.path.dirname(__file__) + "/icon.png")
-        self.spatialScanStatistic_Action  = QAction(icon, self.tr(u"Spatial Scan Statistic"), self.menu1)
-        self.menu4.addAction(self.spatialScanStatistic_Action)
-        self.spatialScanStatistic_Action.triggered.connect(self.run)
-
-
-        ### HELP
-        icon = QIcon(os.path.dirname(__file__) + "/images/help.png")
-        self.help_Action  = QAction(icon, self.tr(u"About GEEPS Spatial Stats"), self.menu1)
-        self.mainMenu.addAction(self.help_Action)
-        self.help_Action.triggered.connect(self.showDlgGlobalMoransI)
-
-        # Moran's I Statistic Menu
-        self.onToggleMoransI = QAction(self.tr("Moran's I Statistic"), self.iface.mainWindow())
-        self.onToggleMoransI.setCheckable(True)
-        self.onToggleMoransI.setChecked(False)
-        self.mainMenu.addAction(self.onToggleMoransI)
-        QObject.connect(self.onToggleMoransI, SIGNAL("toggled(bool)"), self.crrWidget.setVisible )
-        """
-
         ### MENU1 : spatial clusters detection
-        self.menu1 = self.mainMenu.addMenu(self.tr(u'Spatial Autocorrelation'))
+        icon = QIcon(os.path.dirname(__file__) + "/images/publish-to-geonode.png")
+        self.menu1 = self.mainMenu.addMenu(icon, self.tr(u'Spatial Autocorrelation'))
         self.mainMenu.addMenu(self.menu1)
 
         # Moran's I Statistic Menu
@@ -175,16 +151,51 @@ class GeepsSpStats:
         self.menu1.addAction(self.onToggleMoransI)
         QObject.connect(self.onToggleMoransI, SIGNAL("toggled(bool)"), self.crrWidget.setVisible )
 
-        ### MENU2 : spatial clusters detection
-        self.menu2 = self.mainMenu.addMenu(self.tr(u'Spatial Clustering'))
-        self.onToggleMoransI.setCheckable(True)
-        self.onToggleMoransI.setChecked(False)
+        ### MENU2 : Spatial Clustering
+        icon = QIcon(os.path.dirname(__file__) + "/images/tree.png")
+        self.menu2 = self.mainMenu.addMenu(icon, self.tr(u'Spatial Clustering'))
         self.mainMenu.addMenu(self.menu2)
 
-        # Moran's I Statistic Menu
+        # Getis-Ord's G Statistic Menu
         self.onToggleGetisOrdsG = QAction(self.tr("Getis-Ord's G Statistic"), self.iface.mainWindow())
         self.menu2.addAction(self.onToggleGetisOrdsG)
         QObject.connect(self.onToggleGetisOrdsG, SIGNAL("toggled(bool)"), self.crrWidget.setVisible )
+
+        # Nearest neighbor statistic Menu
+        self.nearestNeighborStatistic_Action  = QAction( self.tr(u"Nearest Neighbor Statistic"), self.menu2)
+        self.menu2.addAction(self.nearestNeighborStatistic_Action)
+        self.nearestNeighborStatistic_Action.triggered.connect(self.run)
+
+        # K-function Menu
+        self.Kfunction_Action  = QAction(self.tr(u"K-function"), self.menu2)
+        self.menu2.addAction(self.Kfunction_Action)
+        self.Kfunction_Action.triggered.connect(self.run)
+
+        ### MENU3 : Spatiotemporal Clustering
+        icon = QIcon(os.path.dirname(__file__) + "/images/workspace.png")
+        self.menu3 = self.mainMenu.addMenu(icon, self.tr(u'Spatiotemporal Clustering'))
+        self.mainMenu.addMenu(self.menu3)
+
+        # Knox statistic Menu
+        self.knoxStatistic_Action = QAction(self.tr(u"Knox Statistic"), self.menu3)
+        self.menu3.addAction(self.knoxStatistic_Action)
+        self.knoxStatistic_Action.triggered.connect(self.run)
+
+        ### MENU4 : spatial clusters detection
+        icon = QIcon(os.path.dirname(__file__) + "/images/view.png")
+        self.menu4 = self.mainMenu.addMenu(icon, self.tr(u'Spatial Clusters Detection'))
+        self.mainMenu.addMenu(self.menu4)
+
+        # Knox statistic Menu
+        self.spatialScanStatistic_Action = QAction(self.tr(u"Spatial Scan Statistic"), self.menu4)
+        self.menu4.addAction(self.spatialScanStatistic_Action)
+        self.spatialScanStatistic_Action.triggered.connect(self.run)
+
+        ### HELP
+        icon = QIcon(os.path.dirname(__file__) + "/images/help.png")
+        self.help_Action  = QAction(icon, self.tr(u"About GEEPS Spatial Stats"), self.menu1)
+        self.mainMenu.addAction(self.help_Action)
+        self.help_Action.triggered.connect(self.run)
 
         ### Main Menu 등록
         menuBar = self.iface.mainWindow().menuBar()
@@ -204,3 +215,6 @@ class GeepsSpStats:
 
     def showDlgGlobalMoransI(self):
         pass
+
+    def run(self):
+        alert("Under Construction!!!")
