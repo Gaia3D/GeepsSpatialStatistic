@@ -28,6 +28,7 @@ from PyQt4.QtCore import *
 # Import the code for the dialog
 import os.path
 from Widget_MoransI import Widget_MoransI
+from Widget_GetisOrdsG import Widget_GetisOrdsG
 from Utlity import *
 
 class WidgetContainer(object):
@@ -146,10 +147,9 @@ class GeepsSpStats:
 
         # Moran's I Statistic Menu
         self.onToggleMoransI = QAction(self.tr("Moran's I Statistic"), self.iface.mainWindow())
-        self.onToggleMoransI.setCheckable(True)
-        self.onToggleMoransI.setChecked(False)
         self.menu1.addAction(self.onToggleMoransI)
         QObject.connect(self.onToggleMoransI, SIGNAL("toggled(bool)"), self.crrWidget.setVisible )
+        self.onToggleMoransI.triggered.connect(self.showDlgGlobalMoransI)
 
         ### MENU2 : Spatial Clustering
         icon = QIcon(os.path.dirname(__file__) + "/images/tree.png")
@@ -214,6 +214,7 @@ class GeepsSpStats:
         return retLayerList
 
     def showDlgGlobalMoransI(self):
+        self.crrWidget.setVisible(True)
         pass
 
     def run(self):
