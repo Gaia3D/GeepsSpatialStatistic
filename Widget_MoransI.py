@@ -420,23 +420,25 @@ class Widget_MoransI(QWidget, Ui_Form):
             self.cmbIdColumn.clear()
             self.cmbTgtColumn.clear()
         else:
-            fields = tgtLayer.dataProvider().fields()
-            fieldNameList = []
-            i = 0; idxIdColumn = 0; idxTgtColumn = 0
-            for field in fields:
-                fieldName = field.name()
-                fieldNameList.append(fieldName)
-                if fieldName == self.__crrIdColumn:
-                    idxIdColumn = i
-                if fieldName == self.__crrTgtColumn:
-                    idxTgtColumn = i
-                i += 1
-            self.cmbIdColumn.clear()
-            self.cmbTgtColumn.clear()
-            self.cmbIdColumn.addItems(fieldNameList)
-            self.cmbTgtColumn.addItems(fieldNameList)
-            self.cmbIdColumn.setCurrentIndex(idxIdColumn)
-            self.cmbTgtColumn.setCurrentIndex(idxTgtColumn)
+            provider = tgtLayer.dataProvider()
+            if provider:
+                fields = provider.fields()
+                fieldNameList = []
+                i = 0; idxIdColumn = 0; idxTgtColumn = 0
+                for field in fields:
+                    fieldName = field.name()
+                    fieldNameList.append(fieldName)
+                    if fieldName == self.__crrIdColumn:
+                        idxIdColumn = i
+                    if fieldName == self.__crrTgtColumn:
+                        idxTgtColumn = i
+                    i += 1
+                self.cmbIdColumn.clear()
+                self.cmbTgtColumn.clear()
+                self.cmbIdColumn.addItems(fieldNameList)
+                self.cmbTgtColumn.addItems(fieldNameList)
+                self.cmbIdColumn.setCurrentIndex(idxIdColumn)
+                self.cmbTgtColumn.setCurrentIndex(idxTgtColumn)
 
     # 통계처리 지역의 정보를 추출
     def __collectRegionInfo(self, layer, idColumn, valueColumn):
