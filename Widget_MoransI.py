@@ -5,7 +5,7 @@ import os
 from pysal import W, Moran, Moran_Local
 import numpy as np
 from qgis.core import *
-from Utlity import *
+from Utility import *
 from gui.ui_form_morans_i import Ui_Form_Parameter as Ui_Form
 import matplotlib.pyplot as plt
 from xlwt import Workbook
@@ -316,8 +316,10 @@ class Widget_MoransI(QWidget, Ui_Form):
             local_i = None
         else:
             name = self.tblLocalSummary.item(row, 0).text()
-            value = float(self.tblLocalSummary.item(row, 1).text())
-            local_i = float(self.tblLocalSummary.item(row, 2).text())
+            #value = float(self.tblLocalSummary.item(row, 1).text())
+            value = lm.z[row]
+            #local_i = float(self.tblLocalSummary.item(row, 2).text())
+            local_i = lm.Is[row]
         self.__drawMoranScatterPlot(lm, name, value, local_i)
 
     ### Maker 처리
@@ -532,13 +534,20 @@ class Widget_MoransI(QWidget, Ui_Form):
 
     # 원 값과 Local I 값을 그래프로
     def __drawMoranScatterPlot(self, lm, name=None, value=0, local_i=0):
-        plt.scatter(lm.y, lm.Is)
-        plt.xlabel("Value[i]")
+        #plt.scatter(lm.y, lm.Is)
+        plt.scatter(lm.z, lm.Is)
+        # 4분면선
+        plt.plot([min(lm.z),max(lm.z)], [0,0], "k")
+        plt.plot([0,0], [min(lm.Is),max(lm.Is)], "k")
+        #plt.xlabel("Value[i]")
+        plt.xlabel("z[y(i)]")
         plt.ylabel("Local I[i]")
-        plt.scatter([value], [local_i], color="r", marker="s")
         if not name is None:
+            plt.scatter([value], [local_i], color="r", marker="s")
             plt.text(value, local_i, "  " + name, color="r", fontweight="bold")
         plt.title("Moran Scatter Chart of distance %d" % self.__crrDistance)
+
+        # TODO: 4분면선 추가
         plt.show()
 
     ########################

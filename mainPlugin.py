@@ -22,14 +22,11 @@
 """
 from PyQt4.QtGui import *
 from PyQt4.QtCore import *
-
-# Initialize Qt resources from file resources.py
-#import resources_rc
-# Import the code for the dialog
 import os.path
+from Utility import *
 from Widget_MoransI import Widget_MoransI
 from Widget_GetisOrdsG import Widget_GetisOrdsG
-from Utlity import *
+from Process_NearestNeighbor import Process_NearestNeighbor
 
 class WidgetContainer(object):
 
@@ -146,9 +143,9 @@ class GeepsSpStats:
         self.mainMenu.addMenu(self.menu1)
 
         # Moran's I Statistic Menu
-        self.onToggleMoransI = QAction(self.tr("Moran's I Statistic"), self.iface.mainWindow())
-        self.menu1.addAction(self.onToggleMoransI)
-        self.onToggleMoransI.triggered.connect(self.showWidgetMoransI)
+        self.moransI_Action = QAction(self.tr("Moran's I Statistic"), self.iface.mainWindow())
+        self.menu1.addAction(self.moransI_Action)
+        self.moransI_Action.triggered.connect(self.showWidgetMoransI)
 
         ### MENU2 : Spatial Clustering
         icon = QIcon(os.path.dirname(__file__) + "/images/tree.png")
@@ -156,14 +153,14 @@ class GeepsSpStats:
         self.mainMenu.addMenu(self.menu2)
 
         # Getis-Ord's G Statistic Menu
-        self.onToggleGetisOrdsG = QAction(self.tr("Getis-Ord's G Statistic"), self.iface.mainWindow())
-        self.menu2.addAction(self.onToggleGetisOrdsG)
-        self.onToggleGetisOrdsG.triggered.connect(self.showWidgetGetisOrdsG)
+        self.getisOrdsG_Action = QAction(self.tr("Getis-Ord's G Statistic"), self.iface.mainWindow())
+        self.menu2.addAction(self.getisOrdsG_Action)
+        self.getisOrdsG_Action.triggered.connect(self.showWidgetGetisOrdsG)
 
         # Nearest neighbor statistic Menu
         self.nearestNeighborStatistic_Action  = QAction( self.tr(u"Nearest Neighbor Statistic"), self.menu2)
         self.menu2.addAction(self.nearestNeighborStatistic_Action)
-        self.nearestNeighborStatistic_Action.triggered.connect(self.run)
+        self.nearestNeighborStatistic_Action.triggered.connect(self.processNearestNeighbor)
 
         # K-function Menu
         self.Kfunction_Action  = QAction(self.tr(u"K-function"), self.menu2)
@@ -231,6 +228,10 @@ class GeepsSpStats:
         self.crrWidget = WidgetContainer(self.iface, Widget_GetisOrdsG)
         self.crrWidget.setVisible(True)
         pass
+
+    def processNearestNeighbor(self):
+        nearestNeighbor = Process_NearestNeighbor(self.iface)
+        nearestNeighbor.run()
 
     def run(self):
         alert("Under Construction!!!")

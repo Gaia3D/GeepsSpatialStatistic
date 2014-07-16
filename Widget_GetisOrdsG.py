@@ -5,7 +5,7 @@ import os
 from pysal import W, G, G_Local
 import numpy as np
 from qgis.core import *
-from Utlity import *
+from Utility import *
 from gui.ui_form_getisord_g import Ui_Form_Parameter as Ui_Form
 import matplotlib.pyplot as plt
 from xlwt import Workbook
@@ -102,7 +102,7 @@ class Widget_GetisOrdsG(QWidget, Ui_Form):
         self.connect(self.btnSaveMap, SIGNAL("clicked()"), self.__onSaveMap)
         self.connect(self.btnSaveResult, SIGNAL("clicked()"), self.__onSaveResult)
         self.connect(self.btnZDistPlot, SIGNAL("clicked()"), self.__onZDistPlot)
-        self.connect(self.btnScatterPlot, SIGNAL("clicked()"), self.__onScatterPlot)
+        #self.connect(self.btnScatterPlot, SIGNAL("clicked()"), self.__onScatterPlot)
         self.connect(self.tblGlobalSummary, SIGNAL("cellClicked(int, int)"), self.__onGlobalSummaryChanged)
         self.connect(self.tblLocalSummary, SIGNAL("cellClicked(int, int)"), self.__onLocalSummaryChanged)
 
@@ -523,11 +523,11 @@ class Widget_GetisOrdsG(QWidget, Ui_Form):
 
         plt.plot(distList, zList, "b")
         plt.xlabel("Distance = d")
-        plt.ylabel("Z[d]")
+        plt.ylabel("Z[G(d)]")
         if not self.__criticalZ is None:
             plt.plot([distList[0],distList[-1]], [self.__criticalZ, self.__criticalZ], "r")
             plt.text(distList[-1], self.__criticalZ, "Critical Z-Value\n %.3f" % self.__criticalZ, color="r")
-        plt.title("Z[d]s over a range of search distance")
+        plt.title("Z[G(d)]s over a range of search distance")
         plt.show()
 
     # 원 값과 Local I 값을 그래프로

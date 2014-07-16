@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'ui_form_morans_i.ui'
 #
-# Created: Tue Jul 15 17:44:13 2014
+# Created: Thu Jul 17 00:02:00 2014
 #      by: PyQt4 UI code generator 4.10.2
 #
 # WARNING! All changes made in this file will be lost!
@@ -195,16 +195,16 @@ class Ui_Form_Parameter(object):
         self.rdoSingle.setText(_translate("Form_Parameter", "Moran\'s I : Single", None))
         self.rdoMultiple.setText(_translate("Form_Parameter", "Moran\'s I : Multiple", None))
         self.lbl_s_1.setText(_translate("Form_Parameter", "Search Distance:", None))
-        self.edtSearchDistance.setText(_translate("Form_Parameter", "50000", None))
+        self.edtSearchDistance.setText(_translate("Form_Parameter", "10000", None))
         self.lbl_m_1.setText(_translate("Form_Parameter", "Critical Z-Value:", None))
         self.edtCritcalZValue.setText(_translate("Form_Parameter", "1.96", None))
         self.gb_multiple.setTitle(_translate("Form_Parameter", "Distance Range", None))
         self.label_6.setText(_translate("Form_Parameter", "From:", None))
-        self.edtFrom.setText(_translate("Form_Parameter", "10000", None))
-        self.edtTo.setText(_translate("Form_Parameter", "100000", None))
+        self.edtFrom.setText(_translate("Form_Parameter", "5000", None))
+        self.edtTo.setText(_translate("Form_Parameter", "25000", None))
         self.label_7.setText(_translate("Form_Parameter", "To:", None))
         self.label_8.setText(_translate("Form_Parameter", "By:", None))
-        self.edtBy.setText(_translate("Form_Parameter", "10000", None))
+        self.edtBy.setText(_translate("Form_Parameter", "2500", None))
         self.btnRun.setText(_translate("Form_Parameter", "RUN", None))
         self.btnSaveResult.setText(_translate("Form_Parameter", "Save Result", None))
         self.btnSaveMap.setText(_translate("Form_Parameter", "Save Map", None))
