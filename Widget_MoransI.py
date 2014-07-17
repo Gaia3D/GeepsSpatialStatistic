@@ -533,21 +533,20 @@ class Widget_MoransI(QWidget, Ui_Form):
         plt.show()
 
     # 원 값과 Local I 값을 그래프로
-    def __drawMoranScatterPlot(self, lm, name=None, value=0, local_i=0):
+    def __drawMoranScatterPlot(self, lm, name=None, z=0, local_i=0):
         #plt.scatter(lm.y, lm.Is)
         plt.scatter(lm.z, lm.Is)
         # 4분면선
-        plt.plot([min(lm.z),max(lm.z)], [0,0], "k")
-        plt.plot([0,0], [min(lm.Is),max(lm.Is)], "k")
+        plt.axvline(0, color="k")
+        plt.axhline(0, color="k")
         #plt.xlabel("Value[i]")
         plt.xlabel("z[y(i)]")
         plt.ylabel("Local I[i]")
         if not name is None:
-            plt.scatter([value], [local_i], color="r", marker="s")
-            plt.text(value, local_i, "  " + name, color="r", fontweight="bold")
+            plt.scatter([z], [local_i], color="r", marker="s")
+            plt.text(z, local_i, "  " + name, color="r", fontweight="bold")
         plt.title("Moran Scatter Chart of distance %d" % self.__crrDistance)
 
-        # TODO: 4분면선 추가
         plt.show()
 
     ########################
