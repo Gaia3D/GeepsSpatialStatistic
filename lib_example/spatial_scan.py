@@ -1,0 +1,474 @@
+# coding=utf-8
+# Sample Data: juvenile.shp
+if not iface:
+    iface = qgis.gui.QgisInterface()
+
+import qgis
+from qgis.core import *
+from PyQt4.QtGui import QProgressBar
+from PyQt4.QtCore import *
+import math
+from math import log
+import numpy as np
+import time
+
+# 전역변수 설정
+RANDOM_SEED = int(time.time())
+np.random.seed(RANDOM_SEED)
+
+POPULATION_COLUMN = "POPULATION"
+CASE_COLUMN = "CASE"
+NUM_SIMULATION = 99
+LAYER_PREFIX = "Scan_"
+
+
+def createCircle(center, radius):
+    retPointList = []
+
+    centerX = center.x()
+    centerY = center.y()
+    angleList = np.linspace(0, math.pi*2, 60)
+
+    for angle in angleList:
+        crrX = centerX + math.sin(angle)*radius
+        crrY = centerY + math.cos(angle)*radius
+        retPointList.append(QgsPoint(crrX, crrY))
+    return retPointList
+
+
+#########################
+# Collect source data
+zoneDic = {} # [0]: centroid, [1]: n, [2]: c
+
+# 소스 레이어 선택
+oLayer = qgis.utils.iface.activeLayer()
+if not oLayer:
+    gErrorMsg = u"You must first select source layer."
+    raise UserWarning # 종료
+
+
+layerName = oLayer.name()
+layerType = oLayer.geometryType();
+crs = oLayer.crs()
+
+# ID 리스트 확보
+zoneList = oLayer.allFeatureIds()
+
+# Progress 생성
+progressMessageBar = iface.messageBar().createMessage(u"Data information collecting...")
+progress = QProgressBar()
+progress.setMaximum(len(zoneList))
+progress.setAlignment(Qt.AlignLeft|Qt.AlignVCenter)
+progressMessageBar.layout().addWidget(progress)
+iface.messageBar().pushWidget(progressMessageBar, iface.messageBar().INFO)
+
+# centroid, population,case 모으기
+sum_n = 0 # sum of populations
+sum_c = 0 # sum of cases
+for i, zone in enumerate(zoneList):
+    progress.setValue(i)
+
+    iFeature = oLayer.getFeatures(QgsFeatureRequest(zone)).next()
+    iCent = iFeature.geometry().centroid()
+    n = iFeature[POPULATION_COLUMN]
+    c = iFeature[CASE_COLUMN]
+    zoneDic[zone] = [iCent, n, c]
+    sum_n += n
+    sum_c += c
+# Progress 제거
+iface.messageBar().clearWidgets()
+
+
+#########################
+# LR: Likelihood Ratio
+
+# Create Result Layer
+#  "Point", "LineString", "Polygon", "MultiPoint", "MultiLineString", or "MultiPolygon".
+tLayerOption = "{0}?crs={1}&index=yes".format("LineString", crs.authid())
+tLayer = QgsVectorLayer(tLayerOption, LAYER_PREFIX+layerName, "memory")
+tProvider = tLayer.dataProvider()
+tLayer.startEditing()
+tProvider.addAttributes([QgsField("ZoneID", QVariant.Int),
+                         QgsField("ScannedZone", QVariant.String),
+                         QgsField("Grade", QVariant.Int)
+])
+QgsMapLayerRegistry.instance().addMapLayer(tLayer)
+
+# calculate LR of all zone
+LR_list = []
+N = float(sum_n) # Population Total
+C = float(sum_c) # Case Total
+for zone in zoneList:
+    n = zoneDic[zone][1]
+    c = zoneDic[zone][2]
+    if c == 0:
+        LR = 0
+        LR_list.append([zone, LR])
+        continue
+    n = float(n) # Population of Zone
+    c = float(c) # Case of Zone
+#    LR = (((c/n)**c) * ((1.0-(c/n))**(n-c)) * (((C-c)/(N-n))**(C-c)) * ((1-((C-c)/(N-n)))**((N-n)-(C-c)))) \
+#         / (((C/N)**C) * ((1-(C/N))**(N-C)))
+    # ((C/N)**C) 값의 너무 작아져 실수표현시 항상 0.0 이되어 문제 --> log로 극복
+    log_LR = ( c*log(c/n) + (n-c)*log(1.0-(c/n)) + (C-c)*log((C-c)/(N-n)) + ((N-n)-(C-c))*log(1-(C-c)/(N-n)) ) \
+             - ( C*log(C/N) + (N-C)*log(1-C/N) )
+    LR = math.e ** log_LR
+    LR_list.append([zone, LR])
+
+getKey = lambda item: item[1]
+
+obsFstLR = None
+obsSndLR = None
+osbTrdLR = None
+
+fstLR_list = []
+sndLR_list = []
+trdLR_list = []
+
+#################################
+# Search First aggregated zone
+LR_list.sort(key=getKey, reverse=True)
+fstZone = LR_list[0][0]
+fstCent = zoneDic[fstZone][0]
+distList = []
+for zone in zoneList:
+    iCent = zoneDic[zone][0]
+    if zone == fstZone:
+        continue
+    dist = fstCent.distance(iCent)
+    distList.append([zone, dist])
+
+# order by distance
+distList.sort(key=getKey)
+
+# search maximum range of popTotal < N/2
+scannedZoneList = [fstZone]
+popTotal = zoneDic[fstZone][1]
+for info in distList:
+    if popTotal >= (N/2):
+        print("First Scanned: %d/%d (%.1f%%)" % (popTotal, N, popTotal/N*100))
+        break
+    zone = info[0]
+    n = zoneDic[zone][1]
+    popTotal += n
+    scannedZoneList.append(zone)
+sndZone = scannedZoneList[-1]
+sndCent = zoneDic[sndZone][0]
+
+# Draw circle
+tFeature = QgsFeature(tProvider.fields())
+tFeature.setGeometry(QgsGeometry.fromPolyline(createCircle(fstCent.vertexAt(0), fstCent.distance(sndCent))))
+tFeature.setAttribute(0, fstZone)
+tFeature.setAttribute(1, scannedZoneList)
+tFeature.setAttribute(2, 1)
+tProvider.addFeatures([tFeature])
+
+# Draw Tic
+TIC_DIST = 1000
+for zone in scannedZoneList:
+    cent = zoneDic[zone][0]
+    pnt = cent.vertexAt(0)
+    geom = QgsGeometry.fromPolyline([QgsPoint(pnt.x()-TIC_DIST, pnt.y()-TIC_DIST), QgsPoint(pnt.x()+TIC_DIST, pnt.y()+TIC_DIST)])
+    tFeature.setGeometry(geom)
+    tFeature.setAttribute(0, fstZone)
+    tFeature.setAttribute(1, zone)
+    tFeature.setAttribute(2, 1)
+    tProvider.addFeatures([tFeature])
+    geom = QgsGeometry.fromPolyline([QgsPoint(pnt.x()+TIC_DIST, pnt.y()-TIC_DIST), QgsPoint(pnt.x()-TIC_DIST, pnt.y()+TIC_DIST)])
+    tFeature.setGeometry(geom)
+    tFeature.setAttribute(0, fstZone)
+    tFeature.setAttribute(1, zone)
+    tFeature.setAttribute(2, 1)
+    tProvider.addFeatures([tFeature])
+
+tLayer.commitChanges()
+tLayer.updateExtents()
+qgis.utils.iface.mapCanvas().refresh()
+
+
+#################################
+# Search Second aggregated zone
+sndLR_list = []
+for LR in LR_list:
+    zone = LR[0]
+    if scannedZoneList.count(zone) == 0:
+        sndLR_list.append([zone, LR])
+sndLR_list.sort(key=getKey)
+
+sub_n = 0
+fstZone = sndLR_list[0][0]
+fstCent = zoneDic[fstZone][0]
+distList = []
+for LR in sndLR_list:
+    zone = LR[0]
+    n = zoneDic[zone][1]
+    sub_n += n
+    if zone == fstZone:
+        continue
+    iCent = zoneDic[zone][0]
+    dist = fstCent.distance(iCent)
+    distList.append([zone, dist])
+
+# order by distance
+distList.sort(key=getKey)
+
+# search maximum range of popTotal < N/2
+scannedZoneList = [fstZone]
+popTotal = zoneDic[fstZone][1]
+for info in distList:
+    if popTotal >= (sub_n/2):
+        print("Second Scanned: %d/%d (%.1f%%)" % (popTotal, sub_n, popTotal/sub_n*100))
+        break
+    zone = info[0]
+    n = zoneDic[zone][1]
+    popTotal += n
+    scannedZoneList.append(zone)
+sndZone = scannedZoneList[-1]
+sndCent = zoneDic[sndZone][0]
+
+# Draw circle
+tFeature = QgsFeature(tProvider.fields())
+tFeature.setGeometry(QgsGeometry.fromPolyline(createCircle(fstCent.vertexAt(0), fstCent.distance(sndCent))))
+tFeature.setAttribute(0, fstZone)
+tFeature.setAttribute(1, scannedZoneList)
+tFeature.setAttribute(2, 2)
+tProvider.addFeatures([tFeature])
+
+# Draw Tic
+TIC_DIST = 1000
+for zone in scannedZoneList:
+    cent = zoneDic[zone][0]
+    pnt = cent.vertexAt(0)
+    geom = QgsGeometry.fromPolyline([QgsPoint(pnt.x()-TIC_DIST, pnt.y()-TIC_DIST), QgsPoint(pnt.x()+TIC_DIST, pnt.y()+TIC_DIST)])
+    tFeature.setGeometry(geom)
+    tFeature.setAttribute(0, fstZone)
+    tFeature.setAttribute(1, zone)
+    tFeature.setAttribute(2, 2)
+    tProvider.addFeatures([tFeature])
+    geom = QgsGeometry.fromPolyline([QgsPoint(pnt.x()+TIC_DIST, pnt.y()-TIC_DIST), QgsPoint(pnt.x()-TIC_DIST, pnt.y()+TIC_DIST)])
+    tFeature.setGeometry(geom)
+    tFeature.setAttribute(0, fstZone)
+    tFeature.setAttribute(1, zone)
+    tFeature.setAttribute(2, 2)
+    tProvider.addFeatures([tFeature])
+
+tLayer.commitChanges()
+tLayer.updateExtents()
+qgis.utils.iface.mapCanvas().refresh()
+
+
+#################################
+# Search Third aggregated zone
+trdLR_list = []
+for LR in sndLR_list:
+    zone = LR[0]
+    if scannedZoneList.count(zone) == 0:
+        trdLR_list.append([zone, LR])
+trdLR_list.sort(key=getKey)
+
+sub_n = 0
+fstZone = trdLR_list[0][0]
+fstCent = zoneDic[fstZone][0]
+distList = []
+for LR in trdLR_list:
+    zone = LR[0]
+    n = zoneDic[zone][1]
+    sub_n += n
+    if zone == fstZone:
+        continue
+    iCent = zoneDic[zone][0]
+    dist = fstCent.distance(iCent)
+    distList.append([zone, dist])
+
+# order by distance
+distList.sort(key=getKey)
+
+# search maximum range of popTotal < N/2
+scannedZoneList = [fstZone]
+popTotal = zoneDic[fstZone][1]
+for info in distList:
+    if popTotal >= (sub_n/2):
+        print("Third Scanned: %d/%d (%.1f%%)" % (popTotal, sub_n, popTotal/sub_n*100))
+        break
+    zone = info[0]
+    n = zoneDic[zone][1]
+    popTotal += n
+    scannedZoneList.append(zone)
+sndZone = scannedZoneList[-1]
+sndCent = zoneDic[sndZone][0]
+
+# Draw circle
+tFeature = QgsFeature(tProvider.fields())
+tFeature.setGeometry(QgsGeometry.fromPolyline(createCircle(fstCent.vertexAt(0), fstCent.distance(sndCent))))
+tFeature.setAttribute(0, fstZone)
+tFeature.setAttribute(1, scannedZoneList)
+tFeature.setAttribute(2, 3)
+tProvider.addFeatures([tFeature])
+
+# Draw Tic
+TIC_DIST = 1000
+for zone in scannedZoneList:
+    cent = zoneDic[zone][0]
+    pnt = cent.vertexAt(0)
+    geom = QgsGeometry.fromPolyline([QgsPoint(pnt.x()-TIC_DIST, pnt.y()-TIC_DIST), QgsPoint(pnt.x()+TIC_DIST, pnt.y()+TIC_DIST)])
+    tFeature.setGeometry(geom)
+    tFeature.setAttribute(0, fstZone)
+    tFeature.setAttribute(1, zone)
+    tFeature.setAttribute(2, 3)
+    tProvider.addFeatures([tFeature])
+    geom = QgsGeometry.fromPolyline([QgsPoint(pnt.x()+TIC_DIST, pnt.y()-TIC_DIST), QgsPoint(pnt.x()-TIC_DIST, pnt.y()+TIC_DIST)])
+    tFeature.setGeometry(geom)
+    tFeature.setAttribute(0, fstZone)
+    tFeature.setAttribute(1, zone)
+    tFeature.setAttribute(2, 3)
+    tProvider.addFeatures([tFeature])
+
+tLayer.commitChanges()
+tLayer.updateExtents()
+qgis.utils.iface.mapCanvas().refresh()
+
+
+################################
+# Hypothesis Testing
+
+# Make Monte-Carlo event
+randList = np.random.rand(sum_c)*N
+randCaseDict = {}
+popTotal = 0
+for zone in zoneList:
+    popTotal += zoneDic[zone][1]
+    index = np.where(randList <= popTotal)
+    c = len(randList[index])
+    randCaseDict[zone] = c
+    randList = np.delete(randList, index)
+
+if len(randList) > 0:
+    zone = zoneList[-1]
+    c = len(randList)
+    randCaseDict[zone] = c
+
+# LR: Likelihood Ratio
+LR_sim_list = []
+for zone in zoneList:
+    n = zoneDic[zone][1]
+    try:
+        c = randCaseDict[zone]
+    except IndexError:
+        c = 0
+    if c == 0:
+        LR = 0
+        LR_sim_list.append([zone, LR])
+        continue
+    n = float(n) # Population of Zone
+    c = float(c) # Case of Zone
+    log_LR = ( c*log(c/n) + (n-c)*log(1.0-(c/n)) + (C-c)*log((C-c)/(N-n)) + ((N-n)-(C-c))*log(1-(C-c)/(N-n)) ) \
+             - ( C*log(C/N) + (N-C)*log(1-C/N) )
+    LR = math.e ** log_LR
+    LR_sim_list.append([zone, LR])
+
+# Search First aggregated zone
+LR_sim_list.sort(key=getKey, reverse=True)
+fstZone = LR_sim_list[0][0]
+fstCent = zoneDic[fstZone][0]
+distList = []
+for zone in zoneList:
+    iCent = zoneDic[zone][0]
+    if zone == fstZone:
+        continue
+    dist = fstCent.distance(iCent)
+    distList.append([zone, dist])
+
+# order by distance
+distList.sort(key=getKey)
+
+# search maximum range of popTotal < N/2
+scannedZoneList = [fstZone]
+popTotal = zoneDic[fstZone][1]
+for info in distList:
+    if popTotal >= (N/2):
+        print("First Scanned: %d/%d (%.1f%%)" % (popTotal, N, popTotal/N*100))
+        break
+    zone = info[0]
+    n = zoneDic[zone][1]
+    popTotal += n
+    scannedZoneList.append(zone)
+sndZone = scannedZoneList[-1]
+sndCent = zoneDic[sndZone][0]
+
+# Search Second aggregated zone
+sndLR_list = []
+for LR in LR_sim_list:
+    zone = LR[0]
+    if scannedZoneList.count(zone) == 0:
+        sndLR_list.append([zone, LR])
+sndLR_list.sort(key=getKey)
+
+sub_n = 0
+fstZone = sndLR_list[0][0]
+fstCent = zoneDic[fstZone][0]
+distList = []
+for LR in sndLR_list:
+    zone = LR[0]
+    n = zoneDic[zone][1]
+    sub_n += n
+    if zone == fstZone:
+        continue
+    iCent = zoneDic[zone][0]
+    dist = fstCent.distance(iCent)
+    distList.append([zone, dist])
+
+# order by distance
+distList.sort(key=getKey)
+
+# search maximum range of popTotal < N/2
+scannedZoneList = [fstZone]
+popTotal = zoneDic[fstZone][1]
+for info in distList:
+    if popTotal >= (sub_n/2):
+        print("Second Scanned: %d/%d (%.1f%%)" % (popTotal, sub_n, popTotal/sub_n*100))
+        break
+    zone = info[0]
+    n = zoneDic[zone][1]
+    popTotal += n
+    scannedZoneList.append(zone)
+sndZone = scannedZoneList[-1]
+sndCent = zoneDic[sndZone][0]
+
+# Search Third aggregated zone
+trdLR_list = []
+for LR in sndLR_list:
+    zone = LR[0]
+    if scannedZoneList.count(zone) == 0:
+        trdLR_list.append([zone, LR])
+trdLR_list.sort(key=getKey)
+
+sub_n = 0
+fstZone = trdLR_list[0][0]
+fstCent = zoneDic[fstZone][0]
+distList = []
+for LR in trdLR_list:
+    zone = LR[0]
+    n = zoneDic[zone][1]
+    sub_n += n
+    if zone == fstZone:
+        continue
+    iCent = zoneDic[zone][0]
+    dist = fstCent.distance(iCent)
+    distList.append([zone, dist])
+
+# order by distance
+distList.sort(key=getKey)
+
+# search maximum range of popTotal < N/2
+scannedZoneList = [fstZone]
+popTotal = zoneDic[fstZone][1]
+for info in distList:
+    if popTotal >= (sub_n/2):
+        print("Third Scanned: %d/%d (%.1f%%)" % (popTotal, sub_n, popTotal/sub_n*100))
+        break
+    zone = info[0]
+    n = zoneDic[zone][1]
+    popTotal += n
+    scannedZoneList.append(zone)
+sndZone = scannedZoneList[-1]
+sndCent = zoneDic[sndZone][0]
