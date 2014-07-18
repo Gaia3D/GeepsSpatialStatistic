@@ -523,6 +523,7 @@ class Widget_MoransI(QWidget, Ui_Form):
         for dist in distList:
             zList.append(self.globalResults[dist].z_norm)
 
+        plt.close()
         plt.plot(distList, zList, "b")
         plt.xlabel("Distance = d")
         plt.ylabel("Z[d]")
@@ -534,12 +535,11 @@ class Widget_MoransI(QWidget, Ui_Form):
 
     # 원 값과 Local I 값을 그래프로
     def __drawMoranScatterPlot(self, lm, name=None, z=0, local_i=0):
-        #plt.scatter(lm.y, lm.Is)
+        plt.close()
         plt.scatter(lm.z, lm.Is)
         # 4분면선
         plt.axvline(0, color="k")
         plt.axhline(0, color="k")
-        #plt.xlabel("Value[i]")
         plt.xlabel("z[y(i)]")
         plt.ylabel("Local I[i]")
         if not name is None:

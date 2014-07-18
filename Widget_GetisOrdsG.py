@@ -521,6 +521,7 @@ class Widget_GetisOrdsG(QWidget, Ui_Form):
         for dist in distList:
             zList.append(self.globalResults[dist].z_norm)
 
+        plt.close()
         plt.plot(distList, zList, "b")
         plt.xlabel("Distance = d")
         plt.ylabel("Z[G(d)]")
@@ -532,6 +533,7 @@ class Widget_GetisOrdsG(QWidget, Ui_Form):
 
     # 원 값과 Local I 값을 그래프로
     def __drawMoranScatterPlot(self, lg, name=None, value=0, local_i=0):
+        plt.close()
         plt.scatter(lg.y, lg.Gs)
         plt.xlabel("Value[i]")
         plt.ylabel("Local G[i]")
