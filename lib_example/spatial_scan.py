@@ -11,6 +11,7 @@ import math
 from math import log
 import numpy as np
 import time
+from bisect import bisect_right
 
 # 전역변수 설정
 RANDOM_SEED = int(time.time())
@@ -121,14 +122,17 @@ obsFstLR = None
 obsSndLR = None
 osbTrdLR = None
 
-fstLR_list = []
-sndLR_list = []
-trdLR_list = []
+fst_sim_LR = []
+snd_sim_LR = []
+trd_sim_LR = []
 
 #################################
 # Search First aggregated zone
 LR_list.sort(key=getKey, reverse=True)
 fstZone = LR_list[0][0]
+obsFstLR = LR_list[0][1]
+fst_sim_LR = [obsFstLR]
+
 fstCent = zoneDic[fstZone][0]
 distList = []
 for zone in zoneList:
@@ -146,7 +150,7 @@ scannedZoneList = [fstZone]
 popTotal = zoneDic[fstZone][1]
 for info in distList:
     if popTotal >= (N/2):
-        print("First Scanned: %d/%d (%.1f%%)" % (popTotal, N, popTotal/N*100))
+        print("First Scanned: %d/%d (%.1f%%)" % (popTotal, N, float(popTotal)/N*100))
         break
     zone = info[0]
     n = zoneDic[zone][1]
@@ -197,6 +201,9 @@ sndLR_list.sort(key=getKey)
 
 sub_n = 0
 fstZone = sndLR_list[0][0]
+obsSndLR = sndLR_list[0][1]
+snd_sim_LR = [obsSndLR]
+
 fstCent = zoneDic[fstZone][0]
 distList = []
 for LR in sndLR_list:
@@ -217,7 +224,7 @@ scannedZoneList = [fstZone]
 popTotal = zoneDic[fstZone][1]
 for info in distList:
     if popTotal >= (sub_n/2):
-        print("Second Scanned: %d/%d (%.1f%%)" % (popTotal, sub_n, popTotal/sub_n*100))
+        print("Second Scanned: %d/%d (%.1f%%)" % (popTotal, sub_n, float(popTotal)/sub_n*100))
         break
     zone = info[0]
     n = zoneDic[zone][1]
@@ -268,6 +275,9 @@ trdLR_list.sort(key=getKey)
 
 sub_n = 0
 fstZone = trdLR_list[0][0]
+obsTrdLR = trdLR_list[0][1]
+trd_sim_LR = [obsTrdLR]
+
 fstCent = zoneDic[fstZone][0]
 distList = []
 for LR in trdLR_list:
@@ -288,7 +298,7 @@ scannedZoneList = [fstZone]
 popTotal = zoneDic[fstZone][1]
 for info in distList:
     if popTotal >= (sub_n/2):
-        print("Third Scanned: %d/%d (%.1f%%)" % (popTotal, sub_n, popTotal/sub_n*100))
+        print("Third Scanned: %d/%d (%.1f%%)" % (popTotal, sub_n, float(popTotal)/sub_n*100))
         break
     zone = info[0]
     n = zoneDic[zone][1]
@@ -331,144 +341,168 @@ qgis.utils.iface.mapCanvas().refresh()
 ################################
 # Hypothesis Testing
 
-# Make Monte-Carlo event
-randList = np.random.rand(sum_c)*N
-randCaseDict = {}
-popTotal = 0
-for zone in zoneList:
-    popTotal += zoneDic[zone][1]
-    index = np.where(randList <= popTotal)
-    c = len(randList[index])
-    randCaseDict[zone] = c
-    randList = np.delete(randList, index)
+for iSim in range(NUM_SIMULATION):
+    # Make Monte-Carlo event
+    randList = np.random.rand(sum_c)*N
+    randCaseDict = {}
+    popTotal = 0
+    for zone in zoneList:
+        popTotal += zoneDic[zone][1]
+        index = np.where(randList <= popTotal)
+        c = len(randList[index])
+        randCaseDict[zone] = c
+        randList = np.delete(randList, index)
 
-if len(randList) > 0:
-    zone = zoneList[-1]
-    c = len(randList)
-    randCaseDict[zone] = c
+    if len(randList) > 0:
+        zone = zoneList[-1]
+        c = len(randList)
+        randCaseDict[zone] = c
 
-# LR: Likelihood Ratio
-LR_sim_list = []
-for zone in zoneList:
-    n = zoneDic[zone][1]
-    try:
-        c = randCaseDict[zone]
-    except IndexError:
-        c = 0
-    if c == 0:
-        LR = 0
+    # LR: Likelihood Ratio
+    LR_sim_list = []
+    for zone in zoneList:
+        n = zoneDic[zone][1]
+        try:
+            c = randCaseDict[zone]
+        except IndexError:
+            c = 0
+        if c == 0:
+            LR = 0
+            LR_sim_list.append([zone, LR])
+            continue
+        n = float(n) # Population of Zone
+        c = float(c) # Case of Zone
+        log_LR = ( c*log(c/n) + (n-c)*log(1.0-(c/n)) + (C-c)*log((C-c)/(N-n)) + ((N-n)-(C-c))*log(1-(C-c)/(N-n)) ) \
+                 - ( C*log(C/N) + (N-C)*log(1-C/N) )
+        LR = math.e ** log_LR
         LR_sim_list.append([zone, LR])
-        continue
-    n = float(n) # Population of Zone
-    c = float(c) # Case of Zone
-    log_LR = ( c*log(c/n) + (n-c)*log(1.0-(c/n)) + (C-c)*log((C-c)/(N-n)) + ((N-n)-(C-c))*log(1-(C-c)/(N-n)) ) \
-             - ( C*log(C/N) + (N-C)*log(1-C/N) )
-    LR = math.e ** log_LR
-    LR_sim_list.append([zone, LR])
 
-# Search First aggregated zone
-LR_sim_list.sort(key=getKey, reverse=True)
-fstZone = LR_sim_list[0][0]
-fstCent = zoneDic[fstZone][0]
-distList = []
-for zone in zoneList:
-    iCent = zoneDic[zone][0]
-    if zone == fstZone:
-        continue
-    dist = fstCent.distance(iCent)
-    distList.append([zone, dist])
+    # Search First aggregated zone
+    LR_sim_list.sort(key=getKey, reverse=True)
+    fstZone = LR_sim_list[0][0]
+    fst_sim_LR.append(LR_sim_list[0][1])
 
-# order by distance
-distList.sort(key=getKey)
+    fstCent = zoneDic[fstZone][0]
+    distList = []
+    for zone in zoneList:
+        iCent = zoneDic[zone][0]
+        if zone == fstZone:
+            continue
+        dist = fstCent.distance(iCent)
+        distList.append([zone, dist])
 
-# search maximum range of popTotal < N/2
-scannedZoneList = [fstZone]
-popTotal = zoneDic[fstZone][1]
-for info in distList:
-    if popTotal >= (N/2):
-        print("First Scanned: %d/%d (%.1f%%)" % (popTotal, N, popTotal/N*100))
-        break
-    zone = info[0]
-    n = zoneDic[zone][1]
-    popTotal += n
-    scannedZoneList.append(zone)
-sndZone = scannedZoneList[-1]
-sndCent = zoneDic[sndZone][0]
+    # order by distance
+    distList.sort(key=getKey)
 
-# Search Second aggregated zone
-sndLR_list = []
-for LR in LR_sim_list:
-    zone = LR[0]
-    if scannedZoneList.count(zone) == 0:
-        sndLR_list.append([zone, LR])
-sndLR_list.sort(key=getKey)
+    # search maximum range of popTotal < N/2
+    scannedZoneList = [fstZone]
+    popTotal = zoneDic[fstZone][1]
+    for info in distList:
+        if popTotal >= (N/2):
+            print("First Scanned: %d/%d (%.1f%%)" % (popTotal, N, float(popTotal)/N*100))
+            break
+        zone = info[0]
+        n = zoneDic[zone][1]
+        popTotal += n
+        scannedZoneList.append(zone)
+    sndZone = scannedZoneList[-1]
+    sndCent = zoneDic[sndZone][0]
 
-sub_n = 0
-fstZone = sndLR_list[0][0]
-fstCent = zoneDic[fstZone][0]
-distList = []
-for LR in sndLR_list:
-    zone = LR[0]
-    n = zoneDic[zone][1]
-    sub_n += n
-    if zone == fstZone:
-        continue
-    iCent = zoneDic[zone][0]
-    dist = fstCent.distance(iCent)
-    distList.append([zone, dist])
+    # Search Second aggregated zone
+    sndLR_list = []
+    for LR in LR_sim_list:
+        zone = LR[0]
+        if scannedZoneList.count(zone) == 0:
+            sndLR_list.append([zone, LR])
+    sndLR_list.sort(key=getKey)
 
-# order by distance
-distList.sort(key=getKey)
+    sub_n = 0
+    fstZone = sndLR_list[0][0]
+    snd_sim_LR.append(sndLR_list[0][1])
 
-# search maximum range of popTotal < N/2
-scannedZoneList = [fstZone]
-popTotal = zoneDic[fstZone][1]
-for info in distList:
-    if popTotal >= (sub_n/2):
-        print("Second Scanned: %d/%d (%.1f%%)" % (popTotal, sub_n, popTotal/sub_n*100))
-        break
-    zone = info[0]
-    n = zoneDic[zone][1]
-    popTotal += n
-    scannedZoneList.append(zone)
-sndZone = scannedZoneList[-1]
-sndCent = zoneDic[sndZone][0]
+    fstCent = zoneDic[fstZone][0]
+    distList = []
+    for LR in sndLR_list:
+        zone = LR[0]
+        n = zoneDic[zone][1]
+        sub_n += n
+        if zone == fstZone:
+            continue
+        iCent = zoneDic[zone][0]
+        dist = fstCent.distance(iCent)
+        distList.append([zone, dist])
 
-# Search Third aggregated zone
-trdLR_list = []
-for LR in sndLR_list:
-    zone = LR[0]
-    if scannedZoneList.count(zone) == 0:
-        trdLR_list.append([zone, LR])
-trdLR_list.sort(key=getKey)
+    # order by distance
+    distList.sort(key=getKey)
 
-sub_n = 0
-fstZone = trdLR_list[0][0]
-fstCent = zoneDic[fstZone][0]
-distList = []
-for LR in trdLR_list:
-    zone = LR[0]
-    n = zoneDic[zone][1]
-    sub_n += n
-    if zone == fstZone:
-        continue
-    iCent = zoneDic[zone][0]
-    dist = fstCent.distance(iCent)
-    distList.append([zone, dist])
+    # search maximum range of popTotal < N/2
+    scannedZoneList = [fstZone]
+    popTotal = zoneDic[fstZone][1]
+    for info in distList:
+        if popTotal >= (sub_n/2):
+            print("Second Scanned: %d/%d (%.1f%%)" % (popTotal, sub_n, float(popTotal)/sub_n*100))
+            break
+        zone = info[0]
+        n = zoneDic[zone][1]
+        popTotal += n
+        scannedZoneList.append(zone)
+    sndZone = scannedZoneList[-1]
+    sndCent = zoneDic[sndZone][0]
 
-# order by distance
-distList.sort(key=getKey)
+    # Search Third aggregated zone
+    trdLR_list = []
+    for LR in sndLR_list:
+        zone = LR[0]
+        if scannedZoneList.count(zone) == 0:
+            trdLR_list.append([zone, LR])
+    trdLR_list.sort(key=getKey)
 
-# search maximum range of popTotal < N/2
-scannedZoneList = [fstZone]
-popTotal = zoneDic[fstZone][1]
-for info in distList:
-    if popTotal >= (sub_n/2):
-        print("Third Scanned: %d/%d (%.1f%%)" % (popTotal, sub_n, popTotal/sub_n*100))
-        break
-    zone = info[0]
-    n = zoneDic[zone][1]
-    popTotal += n
-    scannedZoneList.append(zone)
-sndZone = scannedZoneList[-1]
-sndCent = zoneDic[sndZone][0]
+    sub_n = 0
+    fstZone = trdLR_list[0][0]
+    trd_sim_LR.append(trdLR_list[0][1])
+
+    fstCent = zoneDic[fstZone][0]
+    distList = []
+    for LR in trdLR_list:
+        zone = LR[0]
+        n = zoneDic[zone][1]
+        sub_n += n
+        if zone == fstZone:
+            continue
+        iCent = zoneDic[zone][0]
+        dist = fstCent.distance(iCent)
+        distList.append([zone, dist])
+
+    # order by distance
+    distList.sort(key=getKey)
+
+    # search maximum range of popTotal < N/2
+    scannedZoneList = [fstZone]
+    popTotal = zoneDic[fstZone][1]
+    for info in distList:
+        if popTotal >= (sub_n/2):
+            print("Third Scanned: %d/%d (%.1f%%)" % (popTotal, sub_n, float(popTotal)/sub_n*100))
+            break
+        zone = info[0]
+        n = zoneDic[zone][1]
+        popTotal += n
+        scannedZoneList.append(zone)
+    sndZone = scannedZoneList[-1]
+    sndCent = zoneDic[sndZone][0]
+
+#########################
+# Calculate p-value
+fst_sim_LR.sort()
+snd_sim_LR.sort()
+trd_sim_LR.sort()
+
+fst_pos = bisect_right(fst_sim_LR, obsFstLR)
+fst_p = (1.0 - (float(fst_pos) / float(NUM_SIMULATION+1))) * 100.0
+
+snd_pos = bisect_right(snd_sim_LR, obsSndLR)
+snd_p = (1.0 - (float(snd_pos) / float(NUM_SIMULATION+1))) * 100.0
+
+trd_pos = bisect_right(trd_sim_LR, obsTrdLR)
+trd_p = (1.0 - (float(trd_pos) / float(NUM_SIMULATION+1))) * 100.0
+
+print("%f, %f, %f" % (fst_p, snd_p, trd_p))
