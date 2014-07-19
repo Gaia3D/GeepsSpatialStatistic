@@ -32,12 +32,13 @@ import time
 from bisect import bisect_right
 import matplotlib.pyplot as plt
 
+
 # K Value normalize
 k2l = lambda k, h: (k/math.pi)**0.5 - h
 
 # 전역변수 설정
 NUM_SIMULATION = 99
-FROM_H = 6
+FROM_H = 10
 TO_H = 20
 BY_H = 1
 RANDOM_SEED = int(time.time())
@@ -45,8 +46,10 @@ K_h = 0
 
 np.random.seed(RANDOM_SEED)
 
+
+#################################
 # 소스 레이어 선택
-oLayer = qgis.utils.iface.activeLayer()
+oLayer = iface.activeLayer()
 if not oLayer:
     gErrorMsg = u"레이어를 먼저 선택해야 합니다."
     raise UserWarning # 종료
@@ -79,6 +82,9 @@ for i, oID in enumerate(oIDs):
 # Progress 제거
 iface.messageBar().clearWidgets()
 
+############################
+# calculate Area and density
+
 # ConvexHull
 multiPoint = [centroid.vertexAt(0) for centroid in centroidList]
 multiPointGeom = QgsGeometry.fromMultiPoint(multiPoint)
@@ -94,7 +100,8 @@ ext_oy = extent.yMinimum()
 # density
 N = len(centroidList)
 R = convexHull.area()
-lamda = N / R
+lamda = N / R  # force typo of lambda
+
 
 ##########################
 # Multiple K-function
@@ -184,7 +191,7 @@ while (h <= TO_H):
             tLayer.commitChanges()
             tLayer.updateExtents()
             QgsMapLayerRegistry.instance().addMapLayer(tLayer)
-            qgis.utils.iface.mapCanvas().refresh()
+            iface.mapCanvas().refresh()
 
         # calculate K(h)
         sum_Ih = 0
@@ -233,20 +240,20 @@ while (h <= TO_H):
 # Graph
 plt.close()
 
-plt.plot(xList, L_05, "b")
-plt.plot(xList, L_50, "b")
+plt.plot(xList, L_05, "b", linestyle="--")
+plt.plot(xList, L_50, "b", linestyle=":")
 plt.plot(xList, L_95, "b")
 
 plt.plot(xList, L_obs, "r")
 plt.xlabel("h")
 plt.ylabel("L(h)")
 '''
-plt.plot(xList, K_05, "b")
-plt.plot(xList, K_50, "b")
+plt.plot(xList, K_05, "b", linestyle="--")
+plt.plot(xList, K_50, "b", linestyle=":")
 plt.plot(xList, K_95, "b")
 
 plt.plot(xList, K_obs, "r")
 plt.xlabel("h")
-plt.ylabel("L(h)")
+plt.ylabel("K(h)")
 '''
 plt.show()

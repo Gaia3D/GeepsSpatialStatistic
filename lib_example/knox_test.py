@@ -43,7 +43,7 @@ N_ST = None
 N_sim = []
 
 # select source layer
-oLayer = qgis.utils.iface.activeLayer()
+oLayer = iface.activeLayer()
 if not oLayer:
     gErrorMsg = u"레이어를 먼저 선택해야 합니다."
     raise UserWarning # 종료
@@ -163,7 +163,7 @@ for centroid in knoxCentroidList:
 tLayer.commitChanges()
 tLayer.updateExtents()
 QgsMapLayerRegistry.instance().addMapLayer(tLayer)
-qgis.utils.iface.mapCanvas().refresh()
+iface.mapCanvas().refresh()
 
 
 #######
