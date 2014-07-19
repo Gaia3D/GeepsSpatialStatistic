@@ -25,11 +25,13 @@ if not iface:
 import qgis
 from qgis.core import *
 from qgis.gui import QgsMessageBar
-from PyQt4.QtGui import QProgressBar
+from PyQt4.QtGui import *
 from PyQt4.QtCore import *
 
 
-oLayer = qgis.utils.iface.activeLayer()
+#########################
+# Collect source data
+oLayer = iface.activeLayer()
 if not oLayer:
     gErrorMsg = u"레이어를 먼저 선택해야 합니다."
     raise UserWarning # 종료
@@ -37,10 +39,6 @@ if not oLayer:
 layerName = oLayer.name()
 layerType = oLayer.geometryType();
 crs = oLayer.crs()
-
-if layerType != QGis.Point:
-    gErrorMsg =  u"Point 형태의 레이어만 분석 가능합니다."
-    raise UserWarning # 종료
 
 # ID 리스트 확보
 oIDs = oLayer.allFeatureIds()
@@ -65,7 +63,8 @@ for i, oID in enumerate(oIDs):
 # Progress 제거
 iface.messageBar().clearWidgets()
 
-# Memory Layer 생성
+############################
+# Create Result Layer
 #  "Point", "LineString", "Polygon", "MultiPoint", "MultiLineString", or "MultiPolygon".
 tLayerOption = "{0}?crs={1}&index=yes".format("LineString", crs.authid())
 tLayer = QgsVectorLayer(tLayerOption, "Nearest_"+layerName, "memory")
@@ -77,6 +76,21 @@ tProvider.addAttributes([QgsField("iID", QVariant.Int),
                          QgsField("Group", QVariant.String)
 ])
 
+# Apply symbol
+symbol = QgsSymbolV2.defaultSymbol(QGis.Line)
+symbol.setColor(QColor(255,0,0))
+category1 = QgsRendererCategoryV2("Connection", symbol, "Connection")
+
+symbol = QgsSymbolV2.defaultSymbol(QGis.Line)
+symbol.setColor(QColor(0,255,0))
+category2 = QgsRendererCategoryV2("ConvexHull", symbol, "ConvexHull")
+
+categories = [category1, category2]
+renderer = QgsCategorizedSymbolRendererV2("Group", categories)
+tLayer.setRendererV2(renderer)
+
+
+#########################
 # 최근린점 찾기
 sumNearDist = 0.0
 for iID, iGeom in zip(oIDs, centroidList):
@@ -105,6 +119,7 @@ for iID, iGeom in zip(oIDs, centroidList):
 
         sumNearDist += minDist
 
+########################
 # ConvexHull
 multiPoint = [centroid.vertexAt(0) for centroid in centroidList]
 multiPointGeom = QgsGeometry.fromMultiPoint(multiPoint)
@@ -120,8 +135,9 @@ tLayer.commitChanges()
 tLayer.updateExtents()
 
 QgsMapLayerRegistry.instance().addMapLayer(tLayer)
-qgis.utils.iface.mapCanvas().refresh()
+iface.mapCanvas().refresh()
 
+##########################
 # 통계량 계산
 extent = tLayer.extent()
 # 면적은 Convexhull로
@@ -136,6 +152,6 @@ R = r_obs / r_exp
 #Z_r = (r_obs - r_exp) / (r_var**0.5)
 Z_r = 3.826*(r_obs - r_exp) * (ro*N)**0.5
 
-resString = ("Complete", "R: %f, Z_r: %f" % (R, Z_r))
+resString = ("R: %f, Z_r: %f" % (R, Z_r))
 print (resString)
-iface.messageBar().pushMessage(":", resString)
+iface.messageBar().pushMessage("[Result] ", resString)
