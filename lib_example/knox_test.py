@@ -24,13 +24,14 @@ if not iface:
 
 import qgis
 from qgis.core import *
-from PyQt4.QtGui import QProgressBar
+from PyQt4.QtGui import *
 from PyQt4.QtCore import *
 import math
 import numpy as np
 import time
 from bisect import bisect_right
 
+##########################
 # Global variable
 TIME_COLUMN = "DATE"
 NUM_SIMULATION = 999
@@ -132,8 +133,8 @@ N_sim.append(N_ST)
 # Progress 제거
 iface.messageBar().clearWidgets()
 
-#########################
-# Result Layer
+############################
+# Create Result Layer
 
 # Memory Layer 생성
 #  "Point", "LineString", "Polygon", "MultiPoint", "MultiLineString", or "MultiPolygon".
@@ -141,10 +142,23 @@ tLayerOption = "{0}?crs={1}&index=yes".format("Point", crs.authid())
 tLayer = QgsVectorLayer(tLayerOption, "Knox_"+layerName, "memory")
 tProvider = tLayer.dataProvider()
 tLayer.startEditing()
+tProvider.addAttributes([QgsField("Group", QVariant.Int)])
 
+# Apply symbol
+symbol = QgsSymbolV2.defaultSymbol(QGis.Point)
+symbol.setColor(QColor(255,0,0))
+category1 = QgsRendererCategoryV2(1, symbol, "Scanned Points")
+categories = [category1]
+renderer = QgsCategorizedSymbolRendererV2("Group", categories)
+tLayer.setRendererV2(renderer)
+
+
+###########################
+# Draw result
 for centroid in knoxCentroidList:
     tFeature = QgsFeature(tProvider.fields())
     tFeature.setGeometry(QgsGeometry.fromPoint(centroid.vertexAt(0)))
+    tFeature.setAttribute(0, 1) # Group
     tProvider.addFeatures([tFeature])
 tLayer.commitChanges()
 tLayer.updateExtents()
@@ -156,7 +170,7 @@ qgis.utils.iface.mapCanvas().refresh()
 # Monte-Carlo Simulation
 
 # Progress 생성
-progressMessageBar = iface.messageBar().createMessage(u"Monte-Carlo Simulation...")
+progressMessageBar = iface.messageBar().createMessage(u"Monte-Carlo Simulation(%d times)..." % NUM_SIMULATION)
 progress = QProgressBar()
 progress.setMaximum(NUM_SIMULATION)
 progress.setAlignment(Qt.AlignLeft|Qt.AlignVCenter)
@@ -206,7 +220,7 @@ pos = bisect_right(N_sim, N_ST)
 print ("pos: %d" % pos)
 p = (1.0 - (float(pos) / float(NUM_SIMULATION+1))) * 100.0
 
-resString = ("Knox Test p-value: %.5f%%" % p)
+resString = ("Knox Test p-value: %.2f%%" % p)
 print (resString)
-iface.messageBar().pushMessage(":", resString)
+iface.messageBar().pushMessage("[Results] ", resString)
 

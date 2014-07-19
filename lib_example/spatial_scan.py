@@ -548,4 +548,4 @@ trd_p = (1.0 - (float(trd_pos) / float(NUM_SIMULATION+1))) * 100.0
 
 resString = ("1st p-value:%.1f, 2nd p-value:%.1f, 3rd p-value:%.1f" % (fst_p, snd_p, trd_p))
 print (resString)
-iface.messageBar().pushMessage(":", resString)
+iface.messageBar().pushMessage("[Spatial Scan Result] ", resString)
