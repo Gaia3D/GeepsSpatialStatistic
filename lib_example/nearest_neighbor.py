@@ -1,5 +1,24 @@
 # coding=utf-8
-# Sample Data: juvenile.shp
+"""
+/***************************************************************************
+Name                 : Nearest Neighbor Statistic
+Description          : Nearest Neighbor Statistic - Spatial Clustering
+Date                 : 2014.07.19
+copyright            : (C) 2014 by BJ Jang of Gaia3D.com
+email                : jangbi882@gmail.com
+Sample Data          : juvenile.shp
+reference:
+ ***************************************************************************/
+
+/***************************************************************************
+ *                                                                         *
+ *   This program is free software; you can redistribute it and/or modify  *
+ *   it under the terms of the GNU General Public License as published by  *
+ *   the Free Software Foundation; either version 2 of the License, or     *
+ *   (at your option) any later version.                                   *
+ *                                                                         *
+ ***************************************************************************/
+"""
 if not iface:
     iface = qgis.gui.QgisInterface()
 
@@ -117,5 +136,6 @@ R = r_obs / r_exp
 #Z_r = (r_obs - r_exp) / (r_var**0.5)
 Z_r = 3.826*(r_obs - r_exp) * (ro*N)**0.5
 
-iface.messageBar().pushMessage("Complete", "R: %f, Z_r: %f" % (R, Z_r))
-print("R: %f, Z_r: %f" % (R, Z_r))
+resString = ("Complete", "R: %f, Z_r: %f" % (R, Z_r))
+print (resString)
+iface.messageBar().pushMessage(":", resString)

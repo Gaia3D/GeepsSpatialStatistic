@@ -1,5 +1,24 @@
 # coding=utf-8
-# Sample Data: burkitt.shp
+"""
+/***************************************************************************
+Name                 : Knox Test
+Description          : Knox Test - Spatiotemporal Clustering
+Date                 : 2014.07.19
+copyright            : (C) 2014 by BJ Jang of Gaia3D.com
+email                : jangbi882@gmail.com
+Sample Data          : burkitt.shp
+reference:
+ ***************************************************************************/
+
+/***************************************************************************
+ *                                                                         *
+ *   This program is free software; you can redistribute it and/or modify  *
+ *   it under the terms of the GNU General Public License as published by  *
+ *   the Free Software Foundation; either version 2 of the License, or     *
+ *   (at your option) any later version.                                   *
+ *                                                                         *
+ ***************************************************************************/
+"""
 if not iface:
     iface = qgis.gui.QgisInterface()
 
@@ -12,7 +31,7 @@ import numpy as np
 import time
 from bisect import bisect_right
 
-# 전역변수 설정
+# Global variable
 TIME_COLUMN = "DATE"
 NUM_SIMULATION = 999
 RANDOM_SEED = int(time.time())
@@ -22,7 +41,7 @@ BASE_DT = None
 N_ST = None
 N_sim = []
 
-# 소스 레이어 선택
+# select source layer
 oLayer = qgis.utils.iface.activeLayer()
 if not oLayer:
     gErrorMsg = u"레이어를 먼저 선택해야 합니다."
@@ -174,6 +193,9 @@ for iSim in range(NUM_SIMULATION):
     N_sim.append(int(N_ST_double/2))
     #print ("Sim_N(ST): %d" % (N_ST_double/2))
 
+# Progress 제거
+iface.messageBar().clearWidgets()
+
 #######
 # sort results
 N_sim.sort()
@@ -183,8 +205,8 @@ print(N_sim)
 pos = bisect_right(N_sim, N_ST)
 print ("pos: %d" % pos)
 p = (1.0 - (float(pos) / float(NUM_SIMULATION+1))) * 100.0
-print ("p: %.5f%%" % p)
 
-# Progress 제거
-iface.messageBar().clearWidgets()
+resString = ("Knox Test p-value: %.5f%%" % p)
+print (resString)
+iface.messageBar().pushMessage(":", resString)
 

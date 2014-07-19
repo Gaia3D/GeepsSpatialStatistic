@@ -1,11 +1,30 @@
 # coding=utf-8
-# Sample Data: juvenile.shp
+"""
+/***************************************************************************
+Name                 : Spatial Scan
+Description          : Spatial Scan Statistic - Spatial Clustering Detection
+Date                 : 2014.07.19
+copyright            : (C) 2014 by BJ Jang of Gaia3D.com
+email                : jangbi882@gmail.com
+Sample Data          : juvenile.shp
+reference:
+ ***************************************************************************/
+
+/***************************************************************************
+ *                                                                         *
+ *   This program is free software; you can redistribute it and/or modify  *
+ *   it under the terms of the GNU General Public License as published by  *
+ *   the Free Software Foundation; either version 2 of the License, or     *
+ *   (at your option) any later version.                                   *
+ *                                                                         *
+ ***************************************************************************/
+"""
 if not iface:
     iface = qgis.gui.QgisInterface()
 
 import qgis
 from qgis.core import *
-from PyQt4.QtGui import QProgressBar
+from PyQt4.QtGui import *
 from PyQt4.QtCore import *
 import math
 from math import log
@@ -41,8 +60,8 @@ def createCircle(center, radius):
 # Collect source data
 zoneDic = {} # [0]: centroid, [1]: n, [2]: c
 
-# 소스 레이어 선택
-oLayer = qgis.utils.iface.activeLayer()
+# Select source layer
+oLayer = iface.activeLayer()
 if not oLayer:
     gErrorMsg = u"You must first select source layer."
     raise UserWarning # 종료
@@ -79,11 +98,9 @@ for i, zone in enumerate(zoneList):
 # Progress 제거
 iface.messageBar().clearWidgets()
 
-
-#########################
-# LR: Likelihood Ratio
-
+############################
 # Create Result Layer
+
 #  "Point", "LineString", "Polygon", "MultiPoint", "MultiLineString", or "MultiPolygon".
 tLayerOption = "{0}?crs={1}&index=yes".format("LineString", crs.authid())
 tLayer = QgsVectorLayer(tLayerOption, LAYER_PREFIX+layerName, "memory")
@@ -93,7 +110,27 @@ tProvider.addAttributes([QgsField("ZoneID", QVariant.Int),
                          QgsField("ScannedZone", QVariant.String),
                          QgsField("Grade", QVariant.Int)
 ])
-QgsMapLayerRegistry.instance().addMapLayer(tLayer)
+
+# Apply symbol
+symbol = QgsSymbolV2.defaultSymbol(QGis.Line)
+symbol.setColor(QColor(255,0,0))
+category1 = QgsRendererCategoryV2(1, symbol, "1st Scanned")
+
+symbol = QgsSymbolV2.defaultSymbol(QGis.Line)
+symbol.setColor(QColor(0,255,0))
+category2 = QgsRendererCategoryV2(2, symbol, "2nd Scanned")
+
+symbol = QgsSymbolV2.defaultSymbol(QGis.Line)
+symbol.setColor(QColor(0,0,255))
+category3 = QgsRendererCategoryV2(3, symbol, "3rd Scanned")
+
+categories = [category1, category2, category3]
+renderer = QgsCategorizedSymbolRendererV2("Grade", categories)
+tLayer.setRendererV2(renderer)
+
+
+#########################
+# LR: Likelihood Ratio
 
 # calculate LR of all zone
 LR_list = []
@@ -125,6 +162,7 @@ osbTrdLR = None
 fst_sim_LR = []
 snd_sim_LR = []
 trd_sim_LR = []
+
 
 #################################
 # Search First aggregated zone
@@ -187,7 +225,7 @@ for zone in scannedZoneList:
 
 tLayer.commitChanges()
 tLayer.updateExtents()
-qgis.utils.iface.mapCanvas().refresh()
+iface.mapCanvas().refresh()
 
 
 #################################
@@ -234,6 +272,7 @@ sndZone = scannedZoneList[-1]
 sndCent = zoneDic[sndZone][0]
 
 # Draw circle
+tLayer.startEditing()
 tFeature = QgsFeature(tProvider.fields())
 tFeature.setGeometry(QgsGeometry.fromPolyline(createCircle(fstCent.vertexAt(0), fstCent.distance(sndCent))))
 tFeature.setAttribute(0, fstZone)
@@ -261,7 +300,7 @@ for zone in scannedZoneList:
 
 tLayer.commitChanges()
 tLayer.updateExtents()
-qgis.utils.iface.mapCanvas().refresh()
+iface.mapCanvas().refresh()
 
 
 #################################
@@ -308,6 +347,7 @@ sndZone = scannedZoneList[-1]
 sndCent = zoneDic[sndZone][0]
 
 # Draw circle
+tLayer.startEditing()
 tFeature = QgsFeature(tProvider.fields())
 tFeature.setGeometry(QgsGeometry.fromPolyline(createCircle(fstCent.vertexAt(0), fstCent.distance(sndCent))))
 tFeature.setAttribute(0, fstZone)
@@ -335,8 +375,12 @@ for zone in scannedZoneList:
 
 tLayer.commitChanges()
 tLayer.updateExtents()
-qgis.utils.iface.mapCanvas().refresh()
+iface.mapCanvas().refresh()
 
+# Update Map
+tLayer.triggerRepaint()
+iface.mapCanvas().refresh()
+QgsMapLayerRegistry.instance().addMapLayer(tLayer)
 
 ################################
 # Hypothesis Testing
@@ -399,7 +443,6 @@ for iSim in range(NUM_SIMULATION):
     popTotal = zoneDic[fstZone][1]
     for info in distList:
         if popTotal >= (N/2):
-            print("First Scanned: %d/%d (%.1f%%)" % (popTotal, N, float(popTotal)/N*100))
             break
         zone = info[0]
         n = zoneDic[zone][1]
@@ -440,7 +483,6 @@ for iSim in range(NUM_SIMULATION):
     popTotal = zoneDic[fstZone][1]
     for info in distList:
         if popTotal >= (sub_n/2):
-            print("Second Scanned: %d/%d (%.1f%%)" % (popTotal, sub_n, float(popTotal)/sub_n*100))
             break
         zone = info[0]
         n = zoneDic[zone][1]
@@ -481,7 +523,6 @@ for iSim in range(NUM_SIMULATION):
     popTotal = zoneDic[fstZone][1]
     for info in distList:
         if popTotal >= (sub_n/2):
-            print("Third Scanned: %d/%d (%.1f%%)" % (popTotal, sub_n, float(popTotal)/sub_n*100))
             break
         zone = info[0]
         n = zoneDic[zone][1]
@@ -505,4 +546,6 @@ snd_p = (1.0 - (float(snd_pos) / float(NUM_SIMULATION+1))) * 100.0
 trd_pos = bisect_right(trd_sim_LR, obsTrdLR)
 trd_p = (1.0 - (float(trd_pos) / float(NUM_SIMULATION+1))) * 100.0
 
-print("%f, %f, %f" % (fst_p, snd_p, trd_p))
+resString = ("1st p-value:%.1f, 2nd p-value:%.1f, 3rd p-value:%.1f" % (fst_p, snd_p, trd_p))
+print (resString)
+iface.messageBar().pushMessage(":", resString)
