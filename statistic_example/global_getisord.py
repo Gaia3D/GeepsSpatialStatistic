@@ -78,9 +78,6 @@ for i, oID in enumerate(oIDs):
     name = iFeature[NAME_FIELD]
     nameList.append(name)
 
-# 통계 대상 값 수집
-y = np.array(dataList)
-
 
 #######################
 # FROM_DIST에서 TO_DIST까지 BY_DIST 씩 거리 증가하며 Getis-Ord's G 구하기
@@ -98,7 +95,8 @@ for i, testDist in enumerate(range(FROM_DIST, (TO_DIST+BY_DIST), BY_DIST)):
     # Weight Matrix 계산 위한 정보 수집
     neighbors = {}
     weights = {}
-    for iID, iCent in zip(oIDs, centroidList):
+    yList = []
+    for iID, iCent, y in zip(oIDs, centroidList, dataList):
         iRowNeighbors = []
         iRowWeights = []
         for jID, jCent in zip(oIDs, centroidList):
@@ -111,15 +109,17 @@ for i, testDist in enumerate(range(FROM_DIST, (TO_DIST+BY_DIST), BY_DIST)):
                 iRowNeighbors.append(jID)
                 iRowWeights.append(1)
         # iID 지역에 대한 인접 지역 및 가중치 기록
-        neighbors[iID] = iRowNeighbors
-        weights[iID] = iRowWeights
+        if len(iRowNeighbors) > 0:
+            neighbors[iID] = iRowNeighbors
+            weights[iID] = iRowWeights
+            yList.append(y)
 
     # 인접지역과 가중치를 기준으로 현재 testDist의 Weight Matrix 계산
     w = W(neighbors, weights)
     w.transform = "B"
 
     # 현재 testDist의 Moran's I 계산
-    gg = G(y, w)
+    gg = G(np.array(yList), w)
 
     # 결과 저장
     ggResults[testDist] = gg
