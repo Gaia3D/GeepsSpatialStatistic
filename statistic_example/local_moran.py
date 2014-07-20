@@ -22,99 +22,199 @@ reference:
 if not iface:
     iface = qgis.gui.QgisInterface()
 
-from pysal import W, Moran
+from pysal import W, Moran_Local
 import numpy as np
 import qgis
 from qgis.core import *
 from qgis.gui import QgsMessageBar
-from PyQt4.QtGui import QProgressBar
+from PyQt4.QtGui import *
 from PyQt4.QtCore import *
+import matplotlib.pyplot as plt
+
 
 # 전역변수 설정
-NEIGHBOR_DIST = 100
-VALUE_FIELD = "X"
-NAME_FIELD =  "Y"
-SIG_LEVEL = 0.1
-WEIGHT_MODE = "QUEEN" #DIST, QUEEN, ROOK
+NAME_FIELD = "SGG"
+VALUE_FIELD = u"노인비율"
 
-print u"[Moran's I 테스트] 인접판단기준: %f" % NEIGHBOR_DIST
+##########################
+# 레이어에서 정보 추출
 
-layer = qgis.utils.iface.activeLayer()
-if not layer:
-    gErrorMsg = u"레이어를 먼저 선택해야 합니다."
-    raise UserWarning # 종료
+# 레이어 선택
+oLayer = iface.activeLayer()
+if not oLayer:
+    raise UserWarning(u"레이어를 먼저 선택해야 합니다.")  # 종료
 
-layerName = layer.name()
-layerType = layer.geometryType();
-crs = layer.crs()
+layerName = oLayer.name()
+layerType = oLayer.geometryType()
+crs = oLayer.crs()
 
 # ID 리스트 확보
-IDs = layer.allFeatureIds()
-
-# Weight
-neighbors  = {}
-weights = {}
-
-# Data
-dataList = []
+oIDs = oLayer.allFeatureIds()
 
 # Progress 생성
-progressMessageBar = iface.messageBar().createMessage(u"공간상관관계 계산중...")
+progressMessageBar = iface.messageBar().createMessage(u"레이어 정보 수집중...")
 progress = QProgressBar()
-progress.setMaximum(len(IDs))
-progress.setAlignment(Qt.AlignLeft|Qt.AlignVCenter)
+progress.setMaximum(len(oIDs))
+progress.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
 progressMessageBar.layout().addWidget(progress)
 iface.messageBar().pushWidget(progressMessageBar, iface.messageBar().INFO)
 
-for i, iID in enumerate(IDs):
-    iFeature = layer.getFeatures(QgsFeatureRequest(iID)).next()
-    iGeom = iFeature.geometry()
-    iRowNeighbors = []
-    iRowWeights = []
-
+# centroid,value(y),name 모으기
+centroidList = []
+dataList = []
+nameList = []
+for i, oID in enumerate(oIDs):
     progress.setValue(i)
 
-    for jID in IDs:
-        jFeature = layer.getFeatures(QgsFeatureRequest(jID)).next()
-        jGeom = jFeature.geometry()
-
-        if iID == jID: # 같은 지역인 경우
-            dist = 0.0
-        else:
-            if WEIGHT_MODE == "DIST":
-                dist = iGeom.distance(jGeom)
-                if dist != 0.0 and dist <= NEIGHBOR_DIST:
-                    iRowNeighbors.append(jID)
-                    iRowWeights.append(1)
-                    #iRowWeights.append(1.0/dist)
-
-            elif WEIGHT_MODE == "QUEEN":
-                if iGeom.touches(jGeom):
-                    iRowNeighbors.append(jID)
-                    iRowWeights.append(1)
-
-            elif WEIGHT_MODE == "ROOK":
-                pass # 방법을 모르겠다!!!
-            else:
-                gErrorMsg = u"잘못된 WEIGHT_MODE: "+WEIGHT_MODE
-                raise UserWarning
-
-    neighbors[iID] = iRowNeighbors
-    weights[iID] = iRowWeights
-    val = iFeature[VALUE_FIELD]
-    dataList.append(val)
+    iFeature = oLayer.getFeatures(QgsFeatureRequest(oID)).next()
+    iGeom = iFeature.geometry().centroid()
+    centroidList.append(iGeom)
+    data = iFeature[VALUE_FIELD]
+    dataList.append(data)
+    name = iFeature[NAME_FIELD]
+    nameList.append(name)
 
 # Progress 제거
 iface.messageBar().clearWidgets()
 
-w = W(neighbors, weights)
-print w.full()
-
+# 통계 대상 값 수집
 y = np.array(dataList)
-#print y
 
-# Moran's I 계산
-mi = Moran(y, w)
 
-# 결과 출력
-moran_i_res = u"Moran's I: {0:.2f}, z_norm: {1:.2f}, p_norm: {2:.5f}".format(mi.I, mi.z_norm, mi.p_norm)
+#######################
+# 거리의 역수 기준으로 Local Moran's I 구하기
+
+# Weight Matrix 계산 위한 정보 수집
+neighbors = {}
+weights = {}
+for iID, iCent in zip(oIDs, centroidList):
+    iRowNeighbors = []
+    iRowWeights = []
+    for jID, jCent in zip(oIDs, centroidList):
+        # 동일 지역인 경우 제외
+        if iID == jID:
+            continue
+        # 거리 계산
+        dist = iCent.distance(jCent)
+        if dist <= 0:
+            continue
+        # weight 를 거리의 역수로 부여
+        iRowNeighbors.append(jID)
+        iRowWeights.append(1.0 / dist)
+    # iID 지역에 대한 인접 지역 및 가중치 기록
+    neighbors[iID] = iRowNeighbors
+    weights[iID] = iRowWeights
+
+# 거리의 역수를 기준으로 Weight Matrix 계산
+w = W(neighbors, weights)
+
+# Local Moran's I 계산
+lm = Moran_Local(y, w)
+
+
+###########################
+# Moran scatter chart 그리기
+
+# 이미 그래프 창이 있더라도 닫기
+plt.close()
+# 값 그리기
+plt.scatter(lm.z, lm.Is)
+# 4분면선
+plt.axvline(0, color="k")
+plt.axhline(0, color="k")
+# 축 정보
+plt.xlabel("z[y(i)]")
+plt.ylabel("Local I[i]")
+# 제목
+plt.title("Moran Scatter Chart")
+# 그래프 띄우기
+plt.show()
+
+
+###########################
+# 지도에 z 값을 기준으로 색으로 표현
+
+# Create Result Layer
+tLayerOption = "{0}?crs={1}&index=yes".format("Polygon", crs.authid())
+tLayer = QgsVectorLayer(tLayerOption, "Moran_"+layerName, "memory")
+tProvider = tLayer.dataProvider()
+tLayer.startEditing()
+tProvider.addAttributes([QgsField("id", QVariant.Int),
+                         QgsField("y", QVariant.Double),
+                         QgsField("z", QVariant.Double),
+                         QgsField("symbol", QVariant.Int)
+])
+
+# Apply symbol
+symbol = QgsSymbolV2.defaultSymbol(QGis.Polygon)
+symbol.setColor(QColor(255,0,0))
+category1 = QgsRendererCategoryV2(1, symbol, "Very High")
+symbol = QgsSymbolV2.defaultSymbol(QGis.Polygon)
+symbol.setColor(QColor(255,128,0))
+category2 = QgsRendererCategoryV2(2, symbol, "High")
+symbol = QgsSymbolV2.defaultSymbol(QGis.Polygon)
+symbol.setColor(QColor(245,196,128))
+category3 = QgsRendererCategoryV2(3, symbol, "Moderate(high)")
+symbol = QgsSymbolV2.defaultSymbol(QGis.Polygon)
+symbol.setColor(QColor(254,226,194))
+category4 = QgsRendererCategoryV2(4, symbol, "Random(high)")
+symbol = QgsSymbolV2.defaultSymbol(QGis.Polygon)
+symbol.setColor(QColor(193,191,254))
+category5 = QgsRendererCategoryV2(5, symbol, "Random(low)")
+symbol = QgsSymbolV2.defaultSymbol(QGis.Polygon)
+symbol.setColor(QColor(128,128,255))
+category6 = QgsRendererCategoryV2(6, symbol, "Moderate(low)")
+symbol = QgsSymbolV2.defaultSymbol(QGis.Polygon)
+symbol.setColor(QColor(0,0,255))
+category7 = QgsRendererCategoryV2(7, symbol, "Low")
+symbol = QgsSymbolV2.defaultSymbol(QGis.Polygon)
+symbol.setColor(QColor(0,0,196))
+category8 = QgsRendererCategoryV2(8, symbol, "Very Low")
+
+categories = [category1, category2, category3, category4, category5, category6, category7, category8]
+renderer = QgsCategorizedSymbolRendererV2("symbol", categories)
+tLayer.setRendererV2(renderer)
+
+# Progress 생성
+progressMessageBar = iface.messageBar().createMessage(u"Local Moran's I 결과 표시중...")
+progress = QProgressBar()
+progress.setMaximum(len(oIDs))
+progress.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
+progressMessageBar.layout().addWidget(progress)
+iface.messageBar().pushWidget(progressMessageBar, iface.messageBar().INFO)
+
+# 결과 레이어에 표시
+w, ids = lm.w.full()
+for i, id, y, z in zip(range(len(ids)), ids, lm.y, lm.z_sim):
+    iFeature = oLayer.getFeatures(QgsFeatureRequest(id)).next()
+    iGeom = iFeature.geometry()
+
+    tFeature = QgsFeature(tProvider.fields())
+    tFeature.setGeometry(iGeom)
+    tFeature.setAttribute(0, id)
+    tFeature.setAttribute(1, float(y))
+    tFeature.setAttribute(2, float(z))
+    if z >= 2.57:
+        tFeature.setAttribute(3, 1)
+    elif z >= 1.96:
+        tFeature.setAttribute(3, 2)
+    elif z >= 1.64:
+        tFeature.setAttribute(3, 3)
+    elif z >= 0:
+        tFeature.setAttribute(3, 4)
+    elif z >= -1.64:
+        tFeature.setAttribute(3, 5)
+    elif z >= -1.96:
+        tFeature.setAttribute(3, 6)
+    elif z >= -2.75:
+        tFeature.setAttribute(3, 7)
+    else:
+        tFeature.setAttribute(3, 8)
+    tProvider.addFeatures([tFeature])
+
+# 메모리 레이어에 기록
+tLayer.commitChanges()
+tLayer.updateExtents()
+
+QgsMapLayerRegistry.instance().addMapLayer(tLayer)
+iface.mapCanvas().refresh()
