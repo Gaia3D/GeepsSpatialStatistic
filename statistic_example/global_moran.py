@@ -22,166 +22,132 @@ reference:
 if not iface:
     iface = qgis.gui.QgisInterface()
 
-from pysal import W, Moran, Moran_Local
+from pysal import W, Moran
 import numpy as np
 import qgis
 from qgis.core import *
 from qgis.gui import QgsMessageBar
 from PyQt4.QtGui import QProgressBar
 from PyQt4.QtCore import *
+import matplotlib.pyplot as plt
 
 # 전역변수 설정
-NEIGHBOR_DIST = 100
-VALUE_FIELD = "X"
-NAME_FIELD =  "Y"
-SIG_LEVEL = 0.1
-WEIGHT_MODE = "QUEEN" #DIST, QUEEN, ROOK
+FROM_DIST = 10000
+TO_DIST = 200000
+BY_DIST = 10000
+NAME_FIELD =  "SGG"
+VALUE_FIELD = u"노인비율"
+CRITICAL_Z = 1.96
 
-gErrorMsg = ""
+##########################
+# 레이어에서 정보 추출
 
-try:
-    print u"[Moran's I 테스트] 인접판단기준: %f" % NEIGHBOR_DIST
+# 레이어 선택
+oLayer = qgis.utils.iface.activeLayer()
+if not oLayer:
+    raise UserWarning(u"레이어를 먼저 선택해야 합니다.") # 종료
 
-    layer = qgis.utils.iface.activeLayer()
-    if not layer:
-        gErrorMsg = u"레이어를 먼저 선택해야 합니다."
-        raise UserWarning # 종료
+layerName = oLayer.name()
+layerType = oLayer.geometryType();
+crs = oLayer.crs()
 
-    layerName = layer.name()
-    layerType = layer.geometryType();
-    layerTypeName = ""
+# ID 리스트 확보
+oIDs = oLayer.allFeatureIds()
 
-    if layerType == QGis.Point:
-        layerTypeName = "Point"
-    elif layerType == QGis.Line:
-        layerTypeName = "Line"
-    elif layerType == QGis.Polygon:
-        layerTypeName = "Polygon"
-    else:
-        layerTypeName = "Unknown"
+# Progress 생성
+progressMessageBar = iface.messageBar().createMessage(u"공간상관관계 계산중...")
+progress = QProgressBar()
+progress.setMaximum(len(oIDs))
+progress.setAlignment(Qt.AlignLeft|Qt.AlignVCenter)
+progressMessageBar.layout().addWidget(progress)
+iface.messageBar().pushWidget(progressMessageBar, iface.messageBar().INFO)
 
-    crs = layer.crs()
+# centroid,value(y),name 모으기
+centroidList = []
+dataList = []
+nameList = []
+for i, oID in enumerate(oIDs):
+    progress.setValue(i)
 
-    print u"현재 선택된 레이어: %s" % layerName
+    iFeature = oLayer.getFeatures(QgsFeatureRequest(oID)).next()
+    iGeom = iFeature.geometry().centroid()
+    centroidList.append(iGeom)
+    data = iFeature[VALUE_FIELD]
+    dataList.append(data)
+    name = iFeature[NAME_FIELD]
+    nameList.append(name)
 
-    # 선형은 처리 불기
-    if layerType == QGis.Line:
-        gErrorMsg =  u"Line 형태의 레이어는 지원하지 않습니다."
-        raise UserWarning # 종료
+# Progress 제거
+#iface.messageBar().clearWidgets()
 
-    # ID 리스트 확보
-    ids = layer.allFeatureIds()
+# 통계 대상 값
+y = np.array(dataList)
 
-    # Weight
-    neighbors  = {}
+
+#######################
+# FROM_DIST에서 TO_DIST까지 BY_DIST 씩 거리 증가하며 Moran's I 구하기
+
+# 전체 몇 번 돌아가야 하는지 계산
+totalCnt, mod = divmod((TO_DIST-FROM_DIST), BY_DIST)
+totalCnt += 1
+progress.setMaximum(totalCnt)
+
+# 거리를 늘려가며 반복하며 Moran's I 계산
+miResults = {}
+for i, testDist in enumerate( range(FROM_DIST, (TO_DIST+BY_DIST), BY_DIST)):
+    progress.setValue(i)
+
+    # Weight Matrix 계산 위한 정보 수집
+    neighbors = {}
     weights = {}
-
-    # Data
-    dataList = []
-
-    # Progress 생성
-    progressMessageBar = iface.messageBar().createMessage(u"공간상관관계 계산중...")
-    progress = QProgressBar()
-    progress.setMaximum(len(ids))
-    progress.setAlignment(Qt.AlignLeft|Qt.AlignVCenter)
-    progressMessageBar.layout().addWidget(progress)
-    iface.messageBar().pushWidget(progressMessageBar, iface.messageBar().INFO)
-
-    iPrg = 0;
-    for i in ids:
-        iFeature = layer.getFeatures(QgsFeatureRequest(i)).next()
-        iGeom = iFeature.geometry()
+    for iID, iCent in zip(oIDs, centroidList):
         iRowNeighbors = []
         iRowWeights = []
+        for jID, jCent in zip(oIDs, centroidList):
+            if iID == jID:
+                continue
+            dist = iCent.distance(jCent)
+            if dist <= testDist:
+                iRowNeighbors.append(jID)
+                iRowWeights.append(1)
+        neighbors[iID] = iRowNeighbors
+        weights[iID] = iRowWeights
 
-        iPrg += 1
-        progress.setValue(iPrg + 1)
-
-        for j in ids:
-            jFeature = layer.getFeatures(QgsFeatureRequest(j)).next()
-            jGeom = jFeature.geometry()
-
-            if i == j: # 같은 지역인 경우
-                dist = 0.0
-            else:
-                if WEIGHT_MODE == "DIST":
-                    dist = iGeom.distance(jGeom)
-                    if dist != 0.0 and dist <= NEIGHBOR_DIST:
-                        iRowNeighbors.append(j)
-                        iRowWeights.append(1)
-                        #iRowWeights.append(1.0/dist)
-
-                elif WEIGHT_MODE == "QUEEN":
-                    if iGeom.touches(jGeom):
-                        iRowNeighbors.append(j)
-                        iRowWeights.append(1)
-
-                elif WEIGHT_MODE == "ROOK":
-                    pass # 방법을 모르겠다!!!
-                else:
-                    gErrorMsg = u"잘못된 WEIGHT_MODE: "+WEIGHT_MODE
-                    raise UserWarning
-
-        neighbors[i] = iRowNeighbors
-        weights[i] = iRowWeights
-        val = iFeature[VALUE_FIELD]
-        dataList.append(val)
-
-    # Progress 제거
-    iface.messageBar().clearWidgets()
-
+    # 현재 testDist의 Weight Matrix 계산
     w = W(neighbors, weights)
-    print w.full()
 
-    y = np.array(dataList)
-    #print y
+    # 현재 testDist의 Moran's I 계산
+    mi = Moran(y, w, two_tailed=False)
 
-    # Moran's I 계산
-    mi = Moran(y, w)
+    # 결과 저장
+    miResults[testDist] = mi
 
-    # 결과 출력
-    moran_i_res = u"Moran's I 값: {0:.2f}, z_norm: {1:.2f}, p_norm: {2:.5f} 이므로 ".format(mi.I, mi.z_norm, mi.p_norm)
-    if mi.I > mi.EI:
-        moran_i_res += u"양의 공간자기상관임. 비슷한 유형의 자료가 모여 있음"
-    elif mi.I < mi.EI:
-        moran_i_res += u"음의 공간자기상관임. 상이한 유형의 자료가 모여 있음"
-    else:
-        moran_i_res += u"공간자기상관 없음. 완전히 랜덤하게 자료가 분포됨"
+# Progress 제거
+iface.messageBar().clearWidgets()
 
-    # Local Moran
-    lm = Moran_Local(y, w, transformation = "r")
 
-    # Memory Layer
-    print layerTypeName
+###########################
+# 거리에 따른 z 값 변화 그래프
 
-    # crs를 찾기에 실패함
-    tLayerOption = "{0}?crs={1}&index=yes".format(layerTypeName, crs.authid())
-    print tLayerOption
-    tLayer = QgsVectorLayer(tLayerOption, "Moran_"+layerName, "memory")
-    tProvider = tLayer.dataProvider()
-    tLayer.startEditing()
-    tProvider.addAttributes([QgsField("NAME", QVariant.String), QgsField("Z", QVariant.Double), QgsField("P", QVariant.Double)])
+# 그래프를 위한 값 모으기
+distList = miResults.keys()
+distList.sort()
+zList = []
+for dist in distList:
+    zList.append(miResults[dist].z_norm)
 
-    for i in range(len(ids)):
-        id = ids[i]
-        oFeature = layer.getFeatures(QgsFeatureRequest(id)).next()
-        name = oFeature[NAME_FIELD]
+# 이미 그래프 창이 있더라도 닫기
+plt.close()
 
-        if lm.p_sim[i] <= SIG_LEVEL:
-            tFeature = QgsFeature(tProvider.fields())
-            tFeature.setGeometry(oFeature.geometry())
-            tFeature.setAttribute(0, name)
-            tFeature.setAttribute(1, float(lm.z_sim[i]))
-            tFeature.setAttribute(2, float(lm.p_sim[i]))
-            tProvider.addFeatures([tFeature])
-    tLayer.commitChanges()
-    tLayer.updateExtents()
-
-    QgsMapLayerRegistry.instance().addMapLayer(tLayer)
-    #qgis.utils.iface.mapCanvas().setExtent(tLayer.extent())
-    qgis.utils.iface.mapCanvas().refresh()
-
-    iface.messageBar().pushMessage("Complet", moran_i_res)
-
-except KeyError, e:
-    iface.messageBar().pushMessage("Error", str(e) + u" 필드를 찾지 못함", level=QgsMessageBar.CRITICAL)
+# 값 그리기
+plt.plot(distList, zList, "b")
+# 축 정보
+plt.xlabel("Distance = d")
+plt.ylabel("Z[d]")
+# 유효값 기준선
+plt.plot([distList[0],distList[-1]], [CRITICAL_Z, CRITICAL_Z], "r")
+plt.text(distList[-1], CRITICAL_Z, "Critical\n Z-Value\n %.3f" % CRITICAL_Z, color="r")
+# 제목
+plt.title("Z[d]s over a range of search distance")
+# 그래프 띄우기
+plt.show()

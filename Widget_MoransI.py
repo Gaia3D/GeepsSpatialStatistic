@@ -659,9 +659,6 @@ class Widget_MoransI(QWidget, Ui_Form):
             self.__crrDistance = fromValue
             self.__displayLocalResultToUi(fromValue)
 
-            # 단계에 따른 그래프
-            pass
-
             # Progress 제거
             self.progressBar.setVisible(False)
             self.lbl_log.setVisible(False)
