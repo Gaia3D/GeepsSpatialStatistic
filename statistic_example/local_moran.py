@@ -185,7 +185,7 @@ iface.messageBar().pushWidget(progressMessageBar, iface.messageBar().INFO)
 
 # 결과 레이어에 표시
 w, ids = lm.w.full()
-for i, id, y, z in zip(range(len(ids)), ids, lm.y, lm.z_sim):
+for id, y, z in zip(ids, lm.y, lm.z_sim):
     iFeature = oLayer.getFeatures(QgsFeatureRequest(id)).next()
     iGeom = iFeature.geometry()
 

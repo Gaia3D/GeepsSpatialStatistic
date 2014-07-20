@@ -2,7 +2,7 @@
 # Global Getis-Ord's G
 
 import pysal
-from pysal.esda.getisord import G
+from pysal import G
 import numpy as np
 
 f = pysal.open(pysal.examples.get_path("stl_hom.dbf"))
@@ -22,7 +22,7 @@ print gg.p_norm
 # Local Getis-Ord's G
 
 import pysal
-from pysal.esda.getisord import G_Local
+from pysal import G_Local
 import numpy as np
 
 f = pysal.open(pysal.examples.get_path("stl_hom.dbf"))
