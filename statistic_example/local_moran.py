@@ -34,7 +34,7 @@ import matplotlib.pyplot as plt
 
 # 전역변수 설정
 NAME_FIELD = "SGG"
-VALUE_FIELD = u"노인비율"
+VALUE_FIELD = u"LQ"
 
 ##########################
 # 레이어에서 정보 추출

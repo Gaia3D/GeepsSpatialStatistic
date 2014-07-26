@@ -34,7 +34,7 @@ from PyQt4.QtCore import *
 # 전역변수 설정
 NEIGHBOR_DIST = 40000
 NAME_FIELD = "SGG"
-VALUE_FIELD = u"노인비율"
+VALUE_FIELD = u"LQ"
 
 ##########################
 # 레이어에서 정보 추출

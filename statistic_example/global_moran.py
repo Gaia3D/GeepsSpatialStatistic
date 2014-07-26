@@ -37,7 +37,7 @@ FROM_DIST = 10000
 TO_DIST = 200000
 BY_DIST = 10000
 NAME_FIELD = "SGG"
-VALUE_FIELD = u"노인비율"
+VALUE_FIELD = u"LQ"
 CRITICAL_Z = 1.96
 
 ##########################
