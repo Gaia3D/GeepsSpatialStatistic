@@ -67,6 +67,11 @@ class WidgetContainer(object):
         else:
             if not self.__dockwidget is None:
                 self.__unload()
+    # TODO: reflash
+    def repaint(self):
+        if self.__dockwidget:
+            self.__dockwidget.update()
+            self.__dockwidget.repaint()
 
 
 ### QGIS Plugin Implementation.
@@ -218,6 +223,8 @@ class GeepsSpStats:
             self.crrWidget = None
         self.crrWidget = WidgetContainer(self.iface, Widget_MoransI)
         self.crrWidget.setVisible(True)
+        # TODO: UI reflash
+        self.crrWidget.repaint()
         pass
 
     def showWidgetGetisOrdsG(self):

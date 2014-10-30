@@ -6,7 +6,7 @@ Description          : Spatial Scan Statistic - Spatial Clustering Detection
 Date                 : 2014.07.19
 copyright            : (C) 2014 by BJ Jang of Gaia3D.com
 email                : jangbi882@gmail.com
-Sample Data          : juvenile.shp
+Sample Data          : Breast_Cancer_Erie_Naigara_County.shp
 reference:
  ***************************************************************************/
 

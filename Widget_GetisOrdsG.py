@@ -29,6 +29,9 @@ class Widget_GetisOrdsG(QWidget, Ui_Form):
     __crrDistance = None
     __criticalZ = None
     __makerArray = []
+    __modeDrawMark = True
+    __resultLayer = None
+    __srcLayer = None
 
     ### 생성자 및 소멸자
     #생성자
@@ -105,6 +108,8 @@ class Widget_GetisOrdsG(QWidget, Ui_Form):
         #self.connect(self.btnScatterPlot, SIGNAL("clicked()"), self.__onScatterPlot)
         self.connect(self.tblGlobalSummary, SIGNAL("cellClicked(int, int)"), self.__onGlobalSummaryChanged)
         self.connect(self.tblLocalSummary, SIGNAL("cellClicked(int, int)"), self.__onLocalSummaryChanged)
+        self.connect(self.chkContact, SIGNAL("clicked()"), self.__onChkContactChanged)
+        self.connect(self.chkDrawMark, SIGNAL("clicked()"), self.__onChkDrawMarkChanged)
 
     # UI 동작 정의
     # QGIS의 레이어가 변경된 때
@@ -131,24 +136,39 @@ class Widget_GetisOrdsG(QWidget, Ui_Form):
         if (not self.rdoSingle.isChecked()):
             return
 
-        self.lbl_s_1.setEnabled(True)
-        self.edtSearchDistance.setEnabled(True)
-
+        self.chkContact.setEnabled(True)
+        self.__onChkContactChanged()
         self.gb_multiple.setEnabled(False)
 
         self.__crrMode = "single"
+
+    # Weight by Contact 선택시
+    def __onChkContactChanged(self):
+        if self.chkContact.checkState():
+            self.lbl_s_1.setEnabled(False)
+            self.edtSearchDistance.setEnabled(False)
+        else:
+            self.lbl_s_1.setEnabled(True)
+            self.edtSearchDistance.setEnabled(True)
 
     # Multiple 모드 선택시
     def __onRdoMultipleSelected(self):
         if (not self.rdoMultiple.isChecked()):
             return
 
+        self.chkContact.setEnabled(False)
         self.lbl_s_1.setEnabled(False)
         self.edtSearchDistance.setEnabled(False)
 
         self.gb_multiple.setEnabled(True)
 
         self.__crrMode = "multiple"
+
+    # Draw Mark 선택시
+    def __onChkDrawMarkChanged(self):
+        self.__modeDrawMark = self.chkDrawMark.checkState()
+        if not self.__modeDrawMark:
+            self.__resetMaker()
 
     # Global Summary의 행 선택시
     def __onGlobalSummaryChanged(self, row, column):
@@ -159,6 +179,9 @@ class Widget_GetisOrdsG(QWidget, Ui_Form):
                 break
         self.__crrDistance = distance
         self.__displayLocalResultToUi(distance)
+
+        # 레이어 그리기
+        self.__drawZMap(distance)
 
     # Local Summary의 행 선택시
     def __onLocalSummaryChanged(self, row, column):
@@ -337,6 +360,10 @@ class Widget_GetisOrdsG(QWidget, Ui_Form):
         self.__canvas.zoomToSelected(layer)
         self.__canvas.zoomOut()
 
+        # 옵션에 따라 마크 표시
+        if not self.__modeDrawMark:
+            return
+
         # 인접으로 판단된 지역 표시
         centroid = self.sourceRegions[id]["centroid"]
         neighbors = self.localNeighbors[distance]
@@ -458,13 +485,15 @@ class Widget_GetisOrdsG(QWidget, Ui_Form):
             forceGuiUpdate()
 
             iFeature = layer.getFeatures(QgsFeatureRequest(iID)).next()
+            # Rect 수집
+            iRect = iFeature.geometry().boundingBox()
             iGeom = iFeature.geometry().centroid()
             tName = "%s" % iFeature[idColumn]
             try:
                 value = float(iFeature[valueColumn])
             except TypeError:
                 value = 0.0
-            self.sourceRegions[iID] = {"name": tName, "centroid": iGeom, "value": value}
+            self.sourceRegions[iID] = {"name": tName, "centroid": iGeom, "value": value, "mbr": iRect}
         return ids
 
     # 기준 거리에 따른 Weight Matrix 계산
@@ -492,10 +521,20 @@ class Widget_GetisOrdsG(QWidget, Ui_Form):
                 if iID == jID: # 같은 지역인 경우
                     pass
                 else:
-                    dist = iGeom.distance(jGeom)
-                    if dist != 0.0 and dist <= searchDistance:
-                        iRowNeighbors.append(jID)
-                        iRowWeights.append(1)
+                    # searchDistance = 0 인 경우 MBR이 겹치면 인접으로 판단
+                    # G 통계량의 Weight가 0 혹은 1만 허용해 Inverse Distance는 불가
+                    if searchDistance <= 0:
+                        iMbr = self.sourceRegions[iID]["mbr"]
+                        jMbr = self.sourceRegions[jID]["mbr"]
+                        # MBR이 아닌 지오메트리로 테스트 시 너무 잘 죽음
+                        if iMbr.intersects(jMbr):
+                            iRowNeighbors.append(jID)
+                            iRowWeights.append(1)
+                    else:
+                        dist = iGeom.distance(jGeom)
+                        if dist != 0.0 and dist <= searchDistance:
+                            iRowNeighbors.append(jID)
+                            iRowWeights.append(1)
             if (len(iRowNeighbors) > 0):
                 neighbors[iID] = iRowNeighbors
                 weights[iID] = iRowWeights
@@ -551,6 +590,7 @@ class Widget_GetisOrdsG(QWidget, Ui_Form):
         try:
             layer = self.getLayerFromName(layerName)
             if (not layer): return
+            self.__srcLayer = layer
 
             self.tblGlobalSummary.setRowCount(0)
             self.tblLocalSummary.setRowCount(0)
@@ -571,6 +611,10 @@ class Widget_GetisOrdsG(QWidget, Ui_Form):
             # 지역간 가중치를 담은 Weight 생성
             self.lbl_log.setText(u"각 지역간 인접성 계산 중...")
             forceGuiUpdate()
+
+            # Inverse Dist 옵션이 선택중이면 거리 0으로 설정
+            if self.chkContact.checkState():
+                searchDistance = 0
             w, y = self.__calcWeight(layer, ids, searchDistance, valueColumn)
 
             # Getis-Ord's G 계산
@@ -588,6 +632,9 @@ class Widget_GetisOrdsG(QWidget, Ui_Form):
             self.__displayGlobalResultToUi()
             self.__displayLocalResultToUi(searchDistance)
 
+            # 결과를 그리기
+            self.__drawZMap(searchDistance)
+
             # Progress 제거
             self.progressBar.setVisible(False)
             self.lbl_log.setVisible(False)
@@ -596,7 +643,8 @@ class Widget_GetisOrdsG(QWidget, Ui_Form):
             forceGuiUpdate()
 
             return True
-        except Exception:
+        except Exception as e:
+            alert(e.message)
             return False
 
     # 연속 거리 기준으로 Getis-Ord's G 수행
@@ -621,6 +669,13 @@ class Widget_GetisOrdsG(QWidget, Ui_Form):
             self.globalResults = {}
             self.localResults = {}
             self.__resetMaker()
+
+            # Inverse Distance를 위해 0을 추가
+            w, y = self.__calcWeight(layer, ids, 0, valueColumn)
+            gg = G(y, w)
+            lg = G_Local(y, w)
+            self.globalResults[0] = gg
+            self.localResults[0] = lg
 
             searchDistance = fromValue
             iCnt = 1
@@ -652,6 +707,7 @@ class Widget_GetisOrdsG(QWidget, Ui_Form):
             self.__displayGlobalResultToUi()
             self.__crrDistance = fromValue
             self.__displayLocalResultToUi(fromValue)
+            self.__drawZMap(0)
 
             # 단계에 따른 그래프
             pass
@@ -669,6 +725,128 @@ class Widget_GetisOrdsG(QWidget, Ui_Form):
 
     #########################
     ### 분석결과 표현
+    # Create Result Layer
+    def __createResultLayer(self, orgLayer):
+        resultLayerName = "Getis_"+orgLayer.name()
+
+        # 결과 레이어 이미 있는지 확인
+        tLayer = None
+        layers = self.__canvas.layers()
+        for testLayer in layers:
+            name = testLayer.name()
+            if name != resultLayerName:
+                continue
+            if testLayer.type() != QgsMapLayer.VectorLayer:
+                continue
+            # TODO: 메모리 레이어인지 검증
+            #testLayer.dataProvider()
+            tLayer = testLayer
+            break
+
+        if not tLayer:
+            crs = orgLayer.crs()
+            tLayerOption = "{0}?crs={1}&index=yes".format("Polygon", crs.authid())
+            tLayer = QgsVectorLayer(tLayerOption, resultLayerName, "memory")
+            tProvider = tLayer.dataProvider()
+            tLayer.startEditing()
+            tProvider.addAttributes([QgsField("id", QVariant.Int),
+                                     QgsField("y", QVariant.Double),
+                                     QgsField("z", QVariant.Double),
+                                     QgsField("symbol", QVariant.Int)
+            ])
+
+            # Apply symbol
+            symbol = QgsSymbolV2.defaultSymbol(QGis.Polygon)
+            symbol.setColor(QColor(255,0,0))
+            category1 = QgsRendererCategoryV2(1, symbol, "Very High")
+            symbol = QgsSymbolV2.defaultSymbol(QGis.Polygon)
+            symbol.setColor(QColor(255,128,0))
+            category2 = QgsRendererCategoryV2(2, symbol, "High")
+            symbol = QgsSymbolV2.defaultSymbol(QGis.Polygon)
+            symbol.setColor(QColor(245,196,128))
+            category3 = QgsRendererCategoryV2(3, symbol, "Moderate(high)")
+            symbol = QgsSymbolV2.defaultSymbol(QGis.Polygon)
+            symbol.setColor(QColor(254,226,194))
+            category4 = QgsRendererCategoryV2(4, symbol, "Random(high)")
+            symbol = QgsSymbolV2.defaultSymbol(QGis.Polygon)
+            symbol.setColor(QColor(193,191,254))
+            category5 = QgsRendererCategoryV2(5, symbol, "Random(low)")
+            symbol = QgsSymbolV2.defaultSymbol(QGis.Polygon)
+            symbol.setColor(QColor(128,128,255))
+            category6 = QgsRendererCategoryV2(6, symbol, "Moderate(low)")
+            symbol = QgsSymbolV2.defaultSymbol(QGis.Polygon)
+            symbol.setColor(QColor(0,0,255))
+            category7 = QgsRendererCategoryV2(7, symbol, "Low")
+            symbol = QgsSymbolV2.defaultSymbol(QGis.Polygon)
+            symbol.setColor(QColor(0,0,196))
+            category8 = QgsRendererCategoryV2(8, symbol, "Very Low")
+
+            categories = [category1, category2, category3, category4, category5, category6, category7, category8]
+            renderer = QgsCategorizedSymbolRendererV2("symbol", categories)
+            tLayer.setRendererV2(renderer)
+            tLayer.commitChanges()
+            QgsMapLayerRegistry.instance().addMapLayer(tLayer)
+            self.__canvas.refresh()
+
+        # 맴버 변수에 저장
+        self.__resultLayer = tLayer
+
+    # 결과 레이어 그리기
+    def __drawZMap(self, searchDistance):
+        oLayer = self.__srcLayer
+        lg = self.localResults[searchDistance]
+
+        self.__createResultLayer(oLayer)
+
+        tLayer = self.__resultLayer
+        tProvider = tLayer.dataProvider()
+        tLayer.startEditing()
+
+        # 모든 객체 지우기
+        caps = tLayer.dataProvider().capabilities()
+        if not (caps & QgsVectorDataProvider.AddFeatures):
+            alert(u"결과 레이어 편집 불가")
+            return
+
+        if caps & QgsVectorDataProvider.DeleteFeatures:
+            ids = tLayer.allFeatureIds()
+            res = tLayer.dataProvider().deleteFeatures(ids)
+
+        # 결과 레이어에 표시
+        w, ids = lg.w.full()
+        for id, y, z in zip(ids, lg.y, lg.z_sim):
+            iFeature = oLayer.getFeatures(QgsFeatureRequest(id)).next()
+            iGeom = iFeature.geometry()
+
+            tFeature = QgsFeature(tProvider.fields())
+            tFeature.setGeometry(iGeom)
+            tFeature.setAttribute(0, id)
+            tFeature.setAttribute(1, float(y))
+            tFeature.setAttribute(2, float(z))
+            if z >= 2.57:
+                tFeature.setAttribute(3, 1)
+            elif z >= 1.96:
+                tFeature.setAttribute(3, 2)
+            elif z >= 1.64:
+                tFeature.setAttribute(3, 3)
+            elif z >= 0:
+                tFeature.setAttribute(3, 4)
+            elif z >= -1.64:
+                tFeature.setAttribute(3, 5)
+            elif z >= -1.96:
+                tFeature.setAttribute(3, 6)
+            elif z >= -2.75:
+                tFeature.setAttribute(3, 7)
+            else:
+                tFeature.setAttribute(3, 8)
+            tProvider.addFeatures([tFeature])
+
+        tLayer.commitChanges()
+        tLayer.updateExtents()
+
+        # 지도화면 갱신
+        self.__canvas.refresh()
+
     # UI에 표현
     def __displayGlobalResultToUi(self):
         keys = self.globalResults.keys()

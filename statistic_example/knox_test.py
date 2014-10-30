@@ -6,7 +6,7 @@ Description          : Knox Test - Spatiotemporal Clustering
 Date                 : 2014.07.19
 copyright            : (C) 2014 by BJ Jang of Gaia3D.com
 email                : jangbi882@gmail.com
-Sample Data          : burkitt.shp
+Sample Data          : Burkitt_Lymphoma_in_Uganda.shp
 reference:
  ***************************************************************************/
 

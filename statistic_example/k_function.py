@@ -6,7 +6,7 @@ Description          : K-function - Spatial Clustering
 Date                 : 2014.07.19
 copyright            : (C) 2014 by BJ Jang of Gaia3D.com
 email                : jangbi882@gmail.com
-Sample Data          : juvenile.shp
+Sample Data          : Juvenile_Offenders_in_Cardiff.shp
 reference:
  ***************************************************************************/
 
