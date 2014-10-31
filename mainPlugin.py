@@ -26,6 +26,8 @@ import os.path
 from Utility import *
 from Widget_MoransI import Widget_MoransI
 from Widget_GetisOrdsG import Widget_GetisOrdsG
+from Widget_NearestNeighbor import Widget_NearestNeighbor
+
 from Process_NearestNeighbor import Process_NearestNeighbor
 
 class WidgetContainer(object):
@@ -165,7 +167,7 @@ class GeepsSpStats:
         # Nearest neighbor statistic Menu
         self.nearestNeighborStatistic_Action  = QAction( self.tr(u"Nearest Neighbor Statistic"), self.menu2)
         self.menu2.addAction(self.nearestNeighborStatistic_Action)
-        self.nearestNeighborStatistic_Action.triggered.connect(self.processNearestNeighbor)
+        self.nearestNeighborStatistic_Action.triggered.connect(self.showWidgetNearestNeighbor)
 
         # K-function Menu
         self.Kfunction_Action  = QAction(self.tr(u"K-function"), self.menu2)
@@ -233,6 +235,15 @@ class GeepsSpStats:
             del self.crrWidget
             self.crrWidget = None
         self.crrWidget = WidgetContainer(self.iface, Widget_GetisOrdsG)
+        self.crrWidget.setVisible(True)
+        pass
+
+    def showWidgetNearestNeighbor(self):
+        if not self.crrWidget is None:
+            self.crrWidget.setVisible(False)
+            del self.crrWidget
+            self.crrWidget = None
+        self.crrWidget = WidgetContainer(self.iface, Widget_NearestNeighbor)
         self.crrWidget.setVisible(True)
         pass
 
