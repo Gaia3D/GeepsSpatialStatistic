@@ -27,6 +27,7 @@ from Utility import *
 from Widget_MoransI import Widget_MoransI
 from Widget_GetisOrdsG import Widget_GetisOrdsG
 from Widget_NearestNeighbor import Widget_NearestNeighbor
+from Widget_KFunction import Widget_KFunction
 
 from Process_NearestNeighbor import Process_NearestNeighbor
 
@@ -172,7 +173,7 @@ class GeepsSpStats:
         # K-function Menu
         self.Kfunction_Action  = QAction(self.tr(u"K-function"), self.menu2)
         self.menu2.addAction(self.Kfunction_Action)
-        self.Kfunction_Action.triggered.connect(self.run)
+        self.Kfunction_Action.triggered.connect(self.showWidgetKFunction)
 
         ### MENU3 : Spatiotemporal Clustering
         icon = QIcon(os.path.dirname(__file__) + "/images/workspace.png")
@@ -218,6 +219,7 @@ class GeepsSpStats:
             retLayerList.append(layer.name())
         return retLayerList
 
+
     def showWidgetMoransI(self):
         if not self.crrWidget is None:
             self.crrWidget.setVisible(False)
@@ -247,9 +249,14 @@ class GeepsSpStats:
         self.crrWidget.setVisible(True)
         pass
 
-    def processNearestNeighbor(self):
-        nearestNeighbor = Process_NearestNeighbor(self.iface)
-        nearestNeighbor.run()
+    def showWidgetKFunction(self):
+        if not self.crrWidget is None:
+            self.crrWidget.setVisible(False)
+            del self.crrWidget
+            self.crrWidget = None
+        self.crrWidget = WidgetContainer(self.iface, Widget_KFunction)
+        self.crrWidget.setVisible(True)
+        pass
 
     def run(self):
         alert("Under Construction!!!")

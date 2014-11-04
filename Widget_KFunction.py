@@ -5,17 +5,42 @@ import os
 import numpy as np
 from qgis.core import *
 from Utility import *
-from gui.ui_form_nearest_neighbor import Ui_Form_Parameter as Ui_Form
+from gui.ui_form_k_function import Ui_Form_Parameter as Ui_Form
+import time
+import math
+from bisect import bisect_right
+import matplotlib.pyplot as plt
 
+# K Value normalize function
+k2l = lambda k, h: (k/math.pi)**0.5 - h
 
-class Widget_NearestNeighbor(QWidget, Ui_Form):
-    title = "Nearest Neighbor Statistic"
-    objectName = "objNearestNeighbor"
+class Widget_KFunction(QWidget, Ui_Form):
+    title = "K-Function"
+    objectName = "objKFunction"
 
     # 분석결과 저장
     sourceRegions = {}
 
+    # 전역변수 설정
     __crrLayerName = None
+
+    NUM_SIMULATION = 99
+    FROM_H = 10
+    TO_H = 20
+    BY_H = 1
+    RANDOM_SEED = 0
+    K_h = 0
+
+    xList = []
+    L_obs = []
+    L_05 = []
+    L_50 = []
+    L_95 = []
+
+    K_obs = []
+    K_05 = []
+    K_50 = []
+    K_95 = []
 
     ### 생성자 및 소멸자
     #생성자
@@ -69,6 +94,7 @@ class Widget_NearestNeighbor(QWidget, Ui_Form):
         self.connect(self.__canvas, SIGNAL("layersChanged()"), self.__onCanvasLayersChanged)
         self.connect(self.__dockwidget, SIGNAL("visibilityChanged (bool)"), self.__signal_DocWidget_visibilityChanged)
         self.connect(self.btnRun, SIGNAL("clicked()"), self.__onRun)
+        self.connect(self.btnShowGraph, SIGNAL("clicked()"), self.__onShowGraph)
 
     # UI 동작 정의
     # QGIS의 레이어가 변경된 때
@@ -101,13 +127,54 @@ class Widget_NearestNeighbor(QWidget, Ui_Form):
             alert(u"선택된 레이어가 없습니다.")
             return
 
+        try:
+            self.FROM_H = long(self.edtFromH.text())
+        except:
+            alert(u"From H 값이 잘못되었습니다.")
+            self.edtFromH.setText("{0}".format(self.FROM_H))
+            return
+
+        try:
+            self.TO_H = long(self.edtToH.text())
+        except:
+            alert(u"To H 값이 잘못되었습니다.")
+            self.edtToH.setText("{0}".format(self.TO_H))
+            return
+
+        try:
+            self.BY_H = long(self.edtByH.text())
+        except:
+            alert(u"By H 값이 잘못되었습니다.")
+            self.edtByH.setText("{0}".format(self.By_H))
+            return
+
+        if self.FROM_H >= self.TO_H:
+            alert(u"From H는 To H 값보다 작아야 합니다.")
+            return
+
+        if self.BY_H >= (self.TO_H-self.FROM_H):
+            alert(u"By H가 To H와 From H의 차보다 작아야 합니다.")
+            return
+
+        if self.FROM_H <=0 or self.TO_H<=0 or self.BY_H<=0:
+            alert(u"H 값은 모두 0보다 커야 합니다.")
+            return
+
+        try:
+            self.NUM_SIMULATION = long(self.edtNumSimul.text())
+        except:
+            alert(u"Number of monte carlo simulation이 잘못되었습니다.")
+            self.edtNumSimul.setText("{0}".format(self.NUM_SIMULATION))
+            return
+
+
         if self.__runNearestNeighbor(srcLayer):
-            alert(u"Nearest Neighbor Statistic 분석 완료")
+            alert(u"K-function 분석 완료")
         else:
-            alert(u"Nearest Neighbor Statistic 분석 실패")
+            alert(u"K-function 분석 실패")
 
     ### 내부 유틸 함수
-    # 실제 Nearest Neighbor Statistic 수행
+    # TODO: 실제 K-function 수행
     def __runNearestNeighbor(self, srcLayer):
 
         try:
@@ -119,38 +186,159 @@ class Widget_NearestNeighbor(QWidget, Ui_Form):
 
             # 결과 표시용 레이어 만들기
             flagConvexHull = self.chkConvexHull.checkState() & Qt.Checked
-            flagNearestLine = self.chkNearestLine.checkState() & Qt.Checked
 
             resultLayer = None
-            if flagConvexHull or flagNearestLine:
+            if flagConvexHull:
                 resultLayer = self.__createResultLayer(srcLayer)
 
-            # 최근린점 찾기
-            sumNearDist = self.__calcNearest(oIdList, centroidList, resultLayer, flagNearestLine)
-
             # ConvexHull 계산
-            convexArea = self.__calcConvexHull(centroidList, resultLayer, flagConvexHull)
+            convexHull = self.__calcConvexHull(centroidList, resultLayer, flagConvexHull)
 
-            # 통계량 계산
+            # Extent
             extent = srcLayer.extent()
-            A = convexArea
-            N = len(oIdList)
-            ro = N / A
-            r_exp = 1 / (2*(ro**0.5))
-            #r_var = 0.26 / ((N*ro)**0.5)
-            r_var = (4-3.14)/(4*3.14*ro*N)#0.26 / ((N*ro)**0.5)
-            r_obs = sumNearDist / N
-            R = r_obs / r_exp
-            #Z_r = (r_obs - r_exp) / (r_var**0.5)
-            Z_r = 3.826*(r_obs - r_exp) * (ro*N)**0.5
 
-            self.__displayResult(A, N, ro, r_exp, r_var, r_obs, R, Z_r)
+            # 몬테카를로 시뮬레이션 통해 값 검증
+            self.__monteCarloKFunction(self.NUM_SIMULATION, self.TO_H, self.FROM_H, self.BY_H, extent, centroidList, convexHull)
 
         except Exception as e:
             alert(e.message)
             return False
 
         return True
+
+    def __monteCarloKFunction(self, numSim, toH, fromH, byH, extent, centroidList, convexHull):
+        randomSeed = int(time.time())
+        np.random.seed(randomSeed)
+
+        # Extent
+        ext_w = extent.width()
+        ext_h = extent.height()
+        ext_ox = extent.xMinimum()
+        ext_oy = extent.yMinimum()
+
+        # density
+        N = len(centroidList)
+        R = convexHull.area()
+
+        lamda = N / R  # force typo of lambda
+
+        totNumCalc, res = divmod(toH - fromH, byH)
+        totNumCalc += 1
+
+        self.xList = []
+        self.L_obs = []
+        self.L_05 = []
+        self.L_50 = []
+        self.L_95 = []
+
+        self.K_obs = []
+        self.K_05 = []
+        self.K_50 = []
+        self.K_95 = []
+
+        self.progressBar.setAlignment(Qt.AlignLeft|Qt.AlignVCenter)
+
+        self.progressBar.setVisible(True)
+        self.lbl_log.setVisible(True)
+
+        self.txtResult.clear()
+
+        crrCalc = 0
+        h = fromH
+        while (h <= toH):
+            # calculate K(h)
+            K_sim = []
+            sum_Ih = 0
+            for i, iCent in enumerate(centroidList):
+                for j, jCent in enumerate(centroidList):
+                    if i == j:
+                        continue
+                    ds = iCent.distance(jCent)
+
+                    if ds <= h:
+                        sum_Ih += 1
+            K_h = (1/lamda) * (sum_Ih/N)
+            E = math.pi*(h**2)
+            L_h = k2l(K_h, h)
+            self.K_obs.append(K_h)
+            self.L_obs.append(L_h)
+
+            self.txtResult.appendPlainText("\nK(%.1f): %f, E[]: %f, L(h):%f" % (h, K_h, E, L_h))
+
+            K_sim.append(K_h)
+
+            #######
+            # Monte-Carlo Simulation
+
+            # Progress 생성
+            crrCalc += 1
+
+            self.lbl_log.setText(u"Monte-Carlo Simulation of K(%.1f)(%d/%d)..." % (h, crrCalc, totNumCalc))
+            self.progressBar.setMaximum(numSim)
+
+            for iSim in range(numSim):
+                self.progressBar.setValue(iSim)
+                forceGuiUpdate()
+
+                # make random points
+                simXList = np.random.rand(N)*ext_w + ext_ox
+                simYList = np.random.rand(N)*ext_h + ext_oy
+
+                samplePoint = []
+                ii = 0
+                while len(samplePoint) < N:
+                    ii += 1
+                    randPoint = [QgsPoint(x, y) for x, y in zip(simXList, simYList)]
+                    for i, point in enumerate(randPoint):
+                        if convexHull.contains(point):
+                            samplePoint.append(point)
+                        if len(samplePoint) >= N:
+                            break
+
+                # calculate K(h)
+                sum_Ih = 0
+                for i, iPnt in enumerate(samplePoint):
+                    for j, jPnt in enumerate(samplePoint):
+                        if i == j:
+                            continue
+                        ds = ((iPnt.x()-jPnt.x())**2 + (iPnt.y()-jPnt.y())**2)**0.5
+
+                        if ds <= h:
+                            sum_Ih += 1
+                K_h_sim = (1/lamda) * (sum_Ih/N)
+                K_sim.append(K_h_sim)
+
+            #######
+            # sort results
+            K_sim.sort()
+
+            index_05 = int((numSim+1)*0.05)
+            index_50 = int((numSim+1)*0.50)
+            index_95 = int((numSim+1)*0.95)
+
+            self.K_05.append(K_sim[index_05])
+            self.K_50.append(K_sim[index_50])
+            self.K_95.append(K_sim[index_95])
+
+            self.L_05.append(k2l(K_sim[index_05], h))
+            self.L_50.append(k2l(K_sim[index_50], h))
+            self.L_95.append(k2l(K_sim[index_95], h))
+
+            # calculate p-value
+            pos = bisect_right(K_sim, K_h)
+            p = (1.0 - (float(pos) / float(numSim+1))) * 100.0
+
+            self.txtResult.appendPlainText(u"K ==> 05%%:%f, 50%%:%f, 95%%:%f, Obs:%f, p: %.5f%%"
+                   % (K_sim[index_05], K_sim[index_50], K_sim[index_95], K_h, p)
+            )
+
+            h += byH
+            self.xList.append(h)
+
+        self.lbl_log.hide()
+        self.progressBar.hide()
+
+        self.__onShowGraph()
 
 
     # Centroid 모으기
@@ -185,7 +373,7 @@ class Widget_NearestNeighbor(QWidget, Ui_Form):
 
     # Create Result Layer
     def __createResultLayer(self, orgLayer):
-        resultLayerName = "Nearest_"+orgLayer.name()
+        resultLayerName = "KFunc_"+orgLayer.name()
 
         # 결과 레이어 이미 있는지 확인
         tLayer = None
@@ -221,14 +409,10 @@ class Widget_NearestNeighbor(QWidget, Ui_Form):
 
             # Apply symbol
             symbol = QgsSymbolV2.defaultSymbol(QGis.Line)
-            symbol.setColor(QColor(255,0,0))
-            category1 = QgsRendererCategoryV2("Connection", symbol, "Connection")
-
-            symbol = QgsSymbolV2.defaultSymbol(QGis.Line)
             symbol.setColor(QColor(0,255,0))
             category2 = QgsRendererCategoryV2("ConvexHull", symbol, "ConvexHull")
 
-            categories = [category1, category2]
+            categories = [category2]
             renderer = QgsCategorizedSymbolRendererV2("Group", categories)
             tLayer.setRendererV2(renderer)
 
@@ -237,65 +421,6 @@ class Widget_NearestNeighbor(QWidget, Ui_Form):
             self.__canvas.refresh()
 
         return tLayer
-
-
-    # 최근린점 찾기/연결선 그리기
-    def __calcNearest(self, oIdList, centroidList, resultLayer, flagNearestLine):
-        sumNearDist = 0.0
-
-        # 진행상황 표시
-        self.lbl_log.setText(u"연결성 계산 중...")
-        self.lbl_log.setVisible(True)
-        self.progressBar.setMaximum(len(oIdList))
-        self.progressBar.setAlignment(Qt.AlignLeft|Qt.AlignVCenter)
-
-        self.lbl_log.setVisible(True)
-        self.progressBar.setVisible(True)
-
-        i = 0
-        for iID, iGeom in zip(oIdList, centroidList):
-            self.progressBar.setValue(i)
-            forceGuiUpdate()
-            i += 1
-
-            minDist = None
-            nearID = None
-            nearGeom = None
-            for jID, jGeom in zip(oIdList, centroidList):
-                if iID == jID:
-                    continue
-                dist = iGeom.distance(jGeom)
-                if minDist is None or dist < minDist:
-                    minDist = dist
-                    nearID = jID
-                    nearGeom = jGeom
-            if not nearGeom is None:
-                sumNearDist += minDist
-                if resultLayer and flagNearestLine:
-                    resultLayer.startEditing()
-                    tProvider = resultLayer.dataProvider()
-
-                    polyline = []
-                    polyline.append(iGeom.vertexAt(0))
-                    polyline.append(nearGeom.vertexAt(0))
-                    tFeature = QgsFeature(tProvider.fields())
-                    tFeature.setGeometry(QgsGeometry.fromPolyline(polyline))
-                    tFeature.setAttribute(0, iID)
-                    tFeature.setAttribute(1, nearID)
-                    tFeature.setAttribute(2, minDist)
-                    tFeature.setAttribute(3, "Connection")
-                    tProvider.addFeatures([tFeature])
-
-                    resultLayer.commitChanges()
-                    resultLayer.updateExtents()
-
-                    # 지도화면 갱신
-                    self.__canvas.refresh()
-
-        self.lbl_log.setVisible(False)
-        self.progressBar.setVisible(False)
-
-        return sumNearDist
 
 
     # Convex Hull
@@ -326,19 +451,29 @@ class Widget_NearestNeighbor(QWidget, Ui_Form):
             # 지도화면 갱신
             self.__canvas.refresh()
 
-        return convexHull.area()
+        return convexHull
 
-    # 결과표시
-    def __displayResult(self, A, N, ro, r_exp, r_var, r_obs, R, Z_r):
-        resString = u"[결과요약]\n"
-        resString += u"- R:\t{0}\n".format(R)
-        resString += u"- Z_r:\t{0}\n".format(Z_r)
-        resString += u"\n[기초정보]\n"
-        resString += u"- A:\t{0}\n".format(A)
-        resString += u"- N:\t{0}\n".format(N)
-        resString += u"- ro:\t{0}\n".format(ro)
-        resString += u"- r_exp:\t{0}\n".format(r_exp)
-        resString += u"- r_var:\t{0}\n".format(r_var)
-        resString += u"- r_obs:\t{0}\n".format(r_obs)
+    def __onShowGraph(self):
+        plt.close()
 
-        self.txtResult.setPlainText(resString)
+        if len(self.xList) == 0 or len(self.L_05) == 0 or len(self.L_50) == 0 or len(self.L_95) == 0:
+            alert(u"먼저 [RUN]을 눌러 분석을 수행해야 합니다.")
+            return
+
+        plt.plot(self.xList, self.L_05, "b", linestyle="--")
+        plt.plot(self.xList, self.L_50, "b", linestyle=":")
+        plt.plot(self.xList, self.L_95, "b")
+
+        plt.plot(self.xList, self.L_obs, "r")
+        plt.xlabel("h")
+        plt.ylabel("L(h)")
+        '''
+        plt.plot(xList, K_05, "b", linestyle="--")
+        plt.plot(xList, K_50, "b", linestyle=":")
+        plt.plot(xList, K_95, "b")
+
+        plt.plot(xList, K_obs, "r")
+        plt.xlabel("h")
+        plt.ylabel("K(h)")
+        '''
+        plt.show()
