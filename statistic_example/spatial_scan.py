@@ -37,7 +37,7 @@ from bisect import bisect_right
 RANDOM_SEED = int(time.time())
 np.random.seed(RANDOM_SEED)
 
-POPULATION_COLUMN = "CONTROL"
+POPULATION_COLUMN = "POPULATION"
 CASE_COLUMN = "CASE"
 NUM_SIMULATION = 999
 LAYER_PREFIX = "Scan_"

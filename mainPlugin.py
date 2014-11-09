@@ -28,8 +28,8 @@ from Widget_MoransI import Widget_MoransI
 from Widget_GetisOrdsG import Widget_GetisOrdsG
 from Widget_NearestNeighbor import Widget_NearestNeighbor
 from Widget_KFunction import Widget_KFunction
-
-from Process_NearestNeighbor import Process_NearestNeighbor
+from Widget_KnoxStatistic import Widget_KnoxStatistic
+from Widget_SpatialScan import Widget_SpatialScan
 
 class WidgetContainer(object):
 
@@ -183,7 +183,7 @@ class GeepsSpStats:
         # Knox statistic Menu
         self.knoxStatistic_Action = QAction(self.tr(u"Knox Statistic"), self.menu3)
         self.menu3.addAction(self.knoxStatistic_Action)
-        self.knoxStatistic_Action.triggered.connect(self.run)
+        self.knoxStatistic_Action.triggered.connect(self.showWidgetKnoxStatistic)
 
         ### MENU4 : spatial clusters detection
         icon = QIcon(os.path.dirname(__file__) + "/images/view.png")
@@ -193,13 +193,13 @@ class GeepsSpStats:
         # Knox statistic Menu
         self.spatialScanStatistic_Action = QAction(self.tr(u"Spatial Scan Statistic"), self.menu4)
         self.menu4.addAction(self.spatialScanStatistic_Action)
-        self.spatialScanStatistic_Action.triggered.connect(self.run)
+        self.spatialScanStatistic_Action.triggered.connect(self.showWidgetSpatialScan)
 
-        ### HELP
-        icon = QIcon(os.path.dirname(__file__) + "/images/help.png")
-        self.help_Action  = QAction(icon, self.tr(u"About GEEPS Spatial Stats"), self.menu1)
-        self.mainMenu.addAction(self.help_Action)
-        self.help_Action.triggered.connect(self.run)
+        # ### HELP
+        # icon = QIcon(os.path.dirname(__file__) + "/images/help.png")
+        # self.help_Action  = QAction(icon, self.tr(u"About GEEPS Spatial Stats"), self.menu1)
+        # self.mainMenu.addAction(self.help_Action)
+        # self.help_Action.triggered.connect(self.run)
 
         ### Main Menu 등록
         menuBar = self.iface.mainWindow().menuBar()
@@ -255,6 +255,24 @@ class GeepsSpStats:
             del self.crrWidget
             self.crrWidget = None
         self.crrWidget = WidgetContainer(self.iface, Widget_KFunction)
+        self.crrWidget.setVisible(True)
+        pass
+
+    def showWidgetKnoxStatistic(self):
+        if not self.crrWidget is None:
+            self.crrWidget.setVisible(False)
+            del self.crrWidget
+            self.crrWidget = None
+        self.crrWidget = WidgetContainer(self.iface, Widget_KnoxStatistic)
+        self.crrWidget.setVisible(True)
+        pass
+
+    def showWidgetSpatialScan(self):
+        if not self.crrWidget is None:
+            self.crrWidget.setVisible(False)
+            del self.crrWidget
+            self.crrWidget = None
+        self.crrWidget = WidgetContainer(self.iface, Widget_SpatialScan)
         self.crrWidget.setVisible(True)
         pass
 

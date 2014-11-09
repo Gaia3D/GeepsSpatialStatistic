@@ -263,7 +263,7 @@ class Widget_KFunction(QWidget, Ui_Form):
             self.K_obs.append(K_h)
             self.L_obs.append(L_h)
 
-            self.txtResult.appendPlainText("\nK(%.1f): %f, E[]: %f, L(h):%f" % (h, K_h, E, L_h))
+            self.txtResult.appendPlainText("## K(%.1f): %f, E[]: %f, L(h):%f" % (h, K_h, E, L_h))
 
             K_sim.append(K_h)
 

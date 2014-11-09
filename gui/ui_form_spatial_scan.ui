@@ -11,7 +11,7 @@
    </rect>
   </property>
   <property name="windowTitle">
-   <string>Moran's I Statistic</string>
+   <string>Spatial Scan</string>
   </property>
   <widget class="QLabel" name="label">
    <property name="geometry">
@@ -29,9 +29,9 @@
   <widget class="QComboBox" name="cmbLayer">
    <property name="geometry">
     <rect>
-     <x>84</x>
+     <x>144</x>
      <y>2</y>
-     <width>281</width>
+     <width>221</width>
      <height>22</height>
     </rect>
    </property>
@@ -39,218 +39,31 @@
   <widget class="QLabel" name="label_3">
    <property name="geometry">
     <rect>
-     <x>187</x>
-     <y>30</y>
+     <x>4</x>
+     <y>55</y>
      <width>81</width>
      <height>16</height>
     </rect>
    </property>
    <property name="text">
-    <string>Data Column:</string>
+    <string>Case Column:</string>
    </property>
   </widget>
-  <widget class="QComboBox" name="cmbTgtColumn">
+  <widget class="QComboBox" name="cmbCasePopulColumn">
    <property name="geometry">
     <rect>
-     <x>274</x>
-     <y>27</y>
-     <width>91</width>
+     <x>144</x>
+     <y>52</y>
+     <width>221</width>
      <height>22</height>
     </rect>
    </property>
-  </widget>
-  <widget class="QRadioButton" name="rdoSingle">
-   <property name="geometry">
-    <rect>
-     <x>4</x>
-     <y>59</y>
-     <width>141</width>
-     <height>16</height>
-    </rect>
-   </property>
-   <property name="text">
-    <string>Moran's I : Single</string>
-   </property>
-  </widget>
-  <widget class="QRadioButton" name="rdoMultiple">
-   <property name="geometry">
-    <rect>
-     <x>4</x>
-     <y>102</y>
-     <width>151</width>
-     <height>16</height>
-    </rect>
-   </property>
-   <property name="text">
-    <string>Moran's I : Multiple</string>
-   </property>
-  </widget>
-  <widget class="QLabel" name="lbl_s_1">
-   <property name="geometry">
-    <rect>
-     <x>210</x>
-     <y>80</y>
-     <width>101</width>
-     <height>16</height>
-    </rect>
-   </property>
-   <property name="text">
-    <string>Search Distance:</string>
-   </property>
-  </widget>
-  <widget class="QLineEdit" name="edtSearchDistance">
-   <property name="enabled">
-    <bool>false</bool>
-   </property>
-   <property name="geometry">
-    <rect>
-     <x>314</x>
-     <y>77</y>
-     <width>51</width>
-     <height>20</height>
-    </rect>
-   </property>
-   <property name="text">
-    <string>10000</string>
-   </property>
-  </widget>
-  <widget class="QLabel" name="lbl_m_1">
-   <property name="enabled">
-    <bool>true</bool>
-   </property>
-   <property name="geometry">
-    <rect>
-     <x>186</x>
-     <y>53</y>
-     <width>101</width>
-     <height>16</height>
-    </rect>
-   </property>
-   <property name="text">
-    <string>Critical Z-Value:</string>
-   </property>
-  </widget>
-  <widget class="QLineEdit" name="edtCritcalZValue">
-   <property name="geometry">
-    <rect>
-     <x>314</x>
-     <y>50</y>
-     <width>51</width>
-     <height>20</height>
-    </rect>
-   </property>
-   <property name="text">
-    <string>1.96</string>
-   </property>
-  </widget>
-  <widget class="QGroupBox" name="gb_multiple">
-   <property name="enabled">
-    <bool>false</bool>
-   </property>
-   <property name="geometry">
-    <rect>
-     <x>4</x>
-     <y>121</y>
-     <width>361</width>
-     <height>41</height>
-    </rect>
-   </property>
-   <property name="title">
-    <string>Distance Range</string>
-   </property>
-   <widget class="QLabel" name="label_6">
-    <property name="geometry">
-     <rect>
-      <x>10</x>
-      <y>16</y>
-      <width>41</width>
-      <height>16</height>
-     </rect>
-    </property>
-    <property name="text">
-     <string>From:</string>
-    </property>
-    <property name="alignment">
-     <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-    </property>
-   </widget>
-   <widget class="QLineEdit" name="edtFrom">
-    <property name="geometry">
-     <rect>
-      <x>58</x>
-      <y>14</y>
-      <width>71</width>
-      <height>20</height>
-     </rect>
-    </property>
-    <property name="text">
-     <string>5000</string>
-    </property>
-   </widget>
-   <widget class="QLineEdit" name="edtTo">
-    <property name="geometry">
-     <rect>
-      <x>167</x>
-      <y>14</y>
-      <width>71</width>
-      <height>20</height>
-     </rect>
-    </property>
-    <property name="text">
-     <string>25000</string>
-    </property>
-   </widget>
-   <widget class="QLabel" name="label_7">
-    <property name="geometry">
-     <rect>
-      <x>127</x>
-      <y>16</y>
-      <width>31</width>
-      <height>16</height>
-     </rect>
-    </property>
-    <property name="text">
-     <string>To:</string>
-    </property>
-    <property name="alignment">
-     <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-    </property>
-   </widget>
-   <widget class="QLabel" name="label_8">
-    <property name="geometry">
-     <rect>
-      <x>241</x>
-      <y>16</y>
-      <width>31</width>
-      <height>16</height>
-     </rect>
-    </property>
-    <property name="text">
-     <string>By:</string>
-    </property>
-    <property name="alignment">
-     <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-    </property>
-   </widget>
-   <widget class="QLineEdit" name="edtBy">
-    <property name="geometry">
-     <rect>
-      <x>281</x>
-      <y>14</y>
-      <width>71</width>
-      <height>20</height>
-     </rect>
-    </property>
-    <property name="text">
-     <string>2500</string>
-    </property>
-   </widget>
   </widget>
   <widget class="QPushButton" name="btnRun">
    <property name="geometry">
     <rect>
      <x>2</x>
-     <y>165</y>
+     <y>151</y>
      <width>111</width>
      <height>31</height>
     </rect>
@@ -267,205 +80,12 @@
     <string>RUN</string>
    </property>
   </widget>
-  <widget class="QPushButton" name="btnSaveResult">
+  <widget class="QComboBox" name="cmbPopColumn">
    <property name="geometry">
     <rect>
-     <x>284</x>
-     <y>206</y>
-     <width>81</width>
-     <height>23</height>
-    </rect>
-   </property>
-   <property name="text">
-    <string>Save Result</string>
-   </property>
-  </widget>
-  <widget class="QPushButton" name="btnSaveMap">
-   <property name="geometry">
-    <rect>
-     <x>202</x>
-     <y>206</y>
-     <width>81</width>
-     <height>23</height>
-    </rect>
-   </property>
-   <property name="text">
-    <string>Save Map</string>
-   </property>
-   <property name="flat">
-    <bool>false</bool>
-   </property>
-  </widget>
-  <widget class="QLabel" name="label_9">
-   <property name="geometry">
-    <rect>
-     <x>4</x>
-     <y>214</y>
-     <width>131</width>
-     <height>16</height>
-    </rect>
-   </property>
-   <property name="text">
-    <string>Global Summary:</string>
-   </property>
-  </widget>
-  <widget class="QLabel" name="label_10">
-   <property name="geometry">
-    <rect>
-     <x>4</x>
-     <y>348</y>
-     <width>111</width>
-     <height>16</height>
-    </rect>
-   </property>
-   <property name="text">
-    <string>Local Summary:</string>
-   </property>
-  </widget>
-  <widget class="QTableWidget" name="tblGlobalSummary">
-   <property name="geometry">
-    <rect>
-     <x>4</x>
-     <y>230</y>
-     <width>361</width>
-     <height>111</height>
-    </rect>
-   </property>
-   <property name="editTriggers">
-    <set>QAbstractItemView::NoEditTriggers</set>
-   </property>
-   <property name="selectionMode">
-    <enum>QAbstractItemView::SingleSelection</enum>
-   </property>
-   <property name="selectionBehavior">
-    <enum>QAbstractItemView::SelectRows</enum>
-   </property>
-   <property name="cornerButtonEnabled">
-    <bool>false</bool>
-   </property>
-   <property name="rowCount">
-    <number>0</number>
-   </property>
-   <property name="columnCount">
-    <number>6</number>
-   </property>
-   <attribute name="horizontalHeaderVisible">
-    <bool>true</bool>
-   </attribute>
-   <attribute name="horizontalHeaderDefaultSectionSize">
-    <number>57</number>
-   </attribute>
-   <attribute name="verticalHeaderVisible">
-    <bool>false</bool>
-   </attribute>
-   <attribute name="verticalHeaderDefaultSectionSize">
-    <number>20</number>
-   </attribute>
-   <column>
-    <property name="text">
-     <string>Distance</string>
-    </property>
-   </column>
-   <column>
-    <property name="text">
-     <string>I(d)</string>
-    </property>
-   </column>
-   <column>
-    <property name="text">
-     <string>E[]</string>
-    </property>
-   </column>
-   <column>
-    <property name="text">
-     <string>V[]</string>
-    </property>
-   </column>
-   <column>
-    <property name="text">
-     <string>Z[]</string>
-    </property>
-   </column>
-   <column>
-    <property name="text">
-     <string>P[]</string>
-    </property>
-   </column>
-  </widget>
-  <widget class="QTableWidget" name="tblLocalSummary">
-   <property name="enabled">
-    <bool>true</bool>
-   </property>
-   <property name="geometry">
-    <rect>
-     <x>4</x>
-     <y>364</y>
-     <width>361</width>
-     <height>181</height>
-    </rect>
-   </property>
-   <property name="editTriggers">
-    <set>QAbstractItemView::NoEditTriggers</set>
-   </property>
-   <property name="selectionMode">
-    <enum>QAbstractItemView::SingleSelection</enum>
-   </property>
-   <property name="selectionBehavior">
-    <enum>QAbstractItemView::SelectRows</enum>
-   </property>
-   <property name="rowCount">
-    <number>0</number>
-   </property>
-   <property name="columnCount">
-    <number>5</number>
-   </property>
-   <attribute name="horizontalHeaderVisible">
-    <bool>true</bool>
-   </attribute>
-   <attribute name="horizontalHeaderDefaultSectionSize">
-    <number>68</number>
-   </attribute>
-   <attribute name="horizontalHeaderMinimumSectionSize">
-    <number>20</number>
-   </attribute>
-   <attribute name="verticalHeaderVisible">
-    <bool>false</bool>
-   </attribute>
-   <attribute name="verticalHeaderDefaultSectionSize">
-    <number>20</number>
-   </attribute>
-   <column>
-    <property name="text">
-     <string>ID</string>
-    </property>
-   </column>
-   <column>
-    <property name="text">
-     <string>Value</string>
-    </property>
-   </column>
-   <column>
-    <property name="text">
-     <string>I(d)</string>
-    </property>
-   </column>
-   <column>
-    <property name="text">
-     <string>Z[]</string>
-    </property>
-   </column>
-   <column>
-    <property name="text">
-     <string>P[]</string>
-    </property>
-   </column>
-  </widget>
-  <widget class="QComboBox" name="cmbIdColumn">
-   <property name="geometry">
-    <rect>
-     <x>84</x>
+     <x>144</x>
      <y>27</y>
-     <width>91</width>
+     <width>221</width>
      <height>22</height>
     </rect>
    </property>
@@ -475,19 +95,19 @@
     <rect>
      <x>4</x>
      <y>30</y>
-     <width>81</width>
+     <width>131</width>
      <height>16</height>
     </rect>
    </property>
    <property name="text">
-    <string>ID Column:</string>
+    <string>Population Column:</string>
    </property>
   </widget>
   <widget class="QProgressBar" name="progressBar">
    <property name="geometry">
     <rect>
      <x>120</x>
-     <y>164</y>
+     <y>150</y>
      <width>241</width>
      <height>16</height>
     </rect>
@@ -500,7 +120,7 @@
    <property name="geometry">
     <rect>
      <x>120</x>
-     <y>180</y>
+     <y>166</y>
      <width>241</width>
      <height>20</height>
     </rect>
@@ -513,7 +133,7 @@
    <property name="geometry">
     <rect>
      <x>0</x>
-     <y>191</y>
+     <y>177</y>
      <width>361</width>
      <height>16</height>
     </rect>
@@ -522,122 +142,109 @@
     <enum>Qt::Horizontal</enum>
    </property>
   </widget>
-  <widget class="QLabel" name="label_2">
+  <widget class="QLabel" name="label_5">
    <property name="geometry">
     <rect>
-     <x>100</x>
-     <y>348</y>
-     <width>61</width>
+     <x>5</x>
+     <y>97</y>
+     <width>211</width>
      <height>16</height>
     </rect>
    </property>
    <property name="text">
-    <string>Distance=</string>
+    <string>Number of monte carlo simulation:</string>
    </property>
   </widget>
-  <widget class="QLabel" name="lbl_distance">
+  <widget class="QLineEdit" name="edtNumSimul">
    <property name="geometry">
     <rect>
-     <x>160</x>
-     <y>348</y>
-     <width>51</width>
+     <x>224</x>
+     <y>94</y>
+     <width>141</width>
+     <height>20</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>999</string>
+   </property>
+   <property name="alignment">
+    <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
+   </property>
+  </widget>
+  <widget class="QCheckBox" name="chkZoneTick">
+   <property name="geometry">
+    <rect>
+     <x>210</x>
+     <y>120</y>
+     <width>151</width>
      <height>16</height>
     </rect>
    </property>
    <property name="text">
-    <string>10000</string>
+    <string>Draw zone tick</string>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
    </property>
   </widget>
-  <widget class="QPushButton" name="btnScatterPlot">
+  <widget class="QCheckBox" name="chkZoneCircle">
    <property name="geometry">
     <rect>
-     <x>284</x>
-     <y>342</y>
-     <width>81</width>
-     <height>23</height>
+     <x>10</x>
+     <y>120</y>
+     <width>151</width>
+     <height>16</height>
     </rect>
    </property>
    <property name="text">
-    <string>scatter-plot</string>
+    <string>Draw zone circle</string>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
    </property>
   </widget>
-  <widget class="QPushButton" name="btnZDistPlot">
+  <widget class="QPlainTextEdit" name="txtResult">
    <property name="geometry">
     <rect>
-     <x>110</x>
+     <x>5</x>
      <y>206</y>
-     <width>75</width>
-     <height>23</height>
+     <width>361</width>
+     <height>341</height>
     </rect>
    </property>
-   <property name="text">
-    <string>Z-dist plot</string>
+   <property name="readOnly">
+    <bool>true</bool>
    </property>
   </widget>
-  <widget class="QCheckBox" name="chkInverseDist">
+  <widget class="QLabel" name="label_9">
    <property name="geometry">
     <rect>
-     <x>11</x>
-     <y>80</y>
-     <width>181</width>
+     <x>5</x>
+     <y>190</y>
+     <width>131</width>
      <height>16</height>
     </rect>
    </property>
    <property name="text">
-    <string>Weight by Inverse Distance</string>
-   </property>
-   <property name="checked">
-    <bool>true</bool>
-   </property>
-   <property name="tristate">
-    <bool>false</bool>
-   </property>
-  </widget>
-  <widget class="QCheckBox" name="chkDrawMark">
-   <property name="geometry">
-    <rect>
-     <x>223</x>
-     <y>347</y>
-     <width>61</width>
-     <height>16</height>
-    </rect>
-   </property>
-   <property name="text">
-    <string>Mark</string>
-   </property>
-   <property name="checked">
-    <bool>true</bool>
+    <string>Result:</string>
    </property>
   </widget>
   <zorder>label</zorder>
   <zorder>cmbLayer</zorder>
   <zorder>label_3</zorder>
-  <zorder>cmbTgtColumn</zorder>
-  <zorder>rdoSingle</zorder>
-  <zorder>rdoMultiple</zorder>
-  <zorder>lbl_s_1</zorder>
-  <zorder>edtSearchDistance</zorder>
-  <zorder>lbl_m_1</zorder>
-  <zorder>edtCritcalZValue</zorder>
-  <zorder>gb_multiple</zorder>
+  <zorder>cmbCasePopulColumn</zorder>
   <zorder>btnRun</zorder>
-  <zorder>btnSaveResult</zorder>
-  <zorder>btnSaveMap</zorder>
-  <zorder>label_9</zorder>
-  <zorder>label_10</zorder>
-  <zorder>tblGlobalSummary</zorder>
-  <zorder>tblLocalSummary</zorder>
-  <zorder>cmbIdColumn</zorder>
+  <zorder>cmbPopColumn</zorder>
   <zorder>label_4</zorder>
   <zorder>progressBar</zorder>
   <zorder>line</zorder>
   <zorder>lbl_log</zorder>
-  <zorder>label_2</zorder>
-  <zorder>lbl_distance</zorder>
-  <zorder>btnScatterPlot</zorder>
-  <zorder>btnZDistPlot</zorder>
-  <zorder>chkInverseDist</zorder>
-  <zorder>chkDrawMark</zorder>
+  <zorder>label_5</zorder>
+  <zorder>edtNumSimul</zorder>
+  <zorder>chkZoneTick</zorder>
+  <zorder>chkZoneCircle</zorder>
+  <zorder>txtResult</zorder>
+  <zorder>label_9</zorder>
  </widget>
  <resources/>
  <connections/>
