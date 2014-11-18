@@ -652,6 +652,8 @@ class Widget_GetisOrdsG(QWidget, Ui_Form):
         self.__resetMaker();
         try:
             layer = self.getLayerFromName(layerName)
+            self.__srcLayer = layer
+
             if (not layer): return
 
             self.tblGlobalSummary.setRowCount(0)
@@ -794,6 +796,7 @@ class Widget_GetisOrdsG(QWidget, Ui_Form):
     # 결과 레이어 그리기
     def __drawZMap(self, searchDistance):
         oLayer = self.__srcLayer
+
         lg = self.localResults[searchDistance]
 
         self.__createResultLayer(oLayer)
